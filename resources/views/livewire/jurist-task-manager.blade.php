@@ -24,14 +24,14 @@
             <div>
                 <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Titre</label>
                 <input wire:model="title" type="text" 
-                       class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 text-sm focus:border-iap-orange focus:ring-2 focus:ring-iap-orange/20 transition-all outline-none"
-                       placeholder="Titre de la tâche">
+                    class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 text-sm focus:border-iap-orange focus:ring-2 focus:ring-iap-orange/20 transition-all outline-none"
+                    placeholder="Titre de la tâche">
             </div>
             <div>
                 <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Pourcentage (%)</label>
                 <input wire:model="percentage" type="number" min="1" max="100"
-                       class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 text-sm focus:border-iap-orange focus:ring-2 focus:ring-iap-orange/20 transition-all outline-none"
-                       placeholder="1-100">
+                    class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 text-sm focus:border-iap-orange focus:ring-2 focus:ring-iap-orange/20 transition-all outline-none"
+                    placeholder="1-100">
             </div>
             <button type="submit" class="bg-iap-orange hover:bg-orange-600 text-white font-bold px-6 py-3 rounded-xl shadow-lg shadow-iap-orange/30 hover:shadow-iap-orange/50 transition-all duration-300">
                 Ajouter
@@ -48,8 +48,8 @@
                     <div class="flex items-center justify-between p-4 border border-slate-200 rounded-xl {{ $task->is_completed ? 'bg-green-50 border-green-200' : 'bg-white' }}">
                         <div class="flex items-center space-x-4">
                             <input type="checkbox" wire:model.live="task.is_completed" wire:change="toggleComplete({{ $task->id }})" 
-                                   {{ $task->is_completed ? 'checked' : '' }}
-                                   class="w-5 h-5 rounded border-slate-300 text-iap-orange focus:ring-iap-orange">
+                                {{ $task->is_completed ? 'checked' : '' }}
+                                class="w-5 h-5 rounded border-slate-300 text-iap-orange focus:ring-iap-orange">
                             <div>
                                 <p class="font-bold text-slate-900 {{ $task->is_completed ? 'line-through text-slate-400' : '' }}">{{ $task->title }}</p>
                                 <p class="text-sm font-bold {{ $task->is_completed ? 'text-green-600' : 'text-iap-orange' }}">{{ $task->percentage }}%</p>

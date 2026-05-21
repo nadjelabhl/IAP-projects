@@ -4,4 +4,4 @@
             @livewire('dashboard-stats')
         </div>
     </div>
-</x-app-layout>
+</x-app-layout0

@@ -35,7 +35,7 @@ Route::get('/dashboard', function () {
     $user = auth()->user();
     return match($user->role) {
         'admin' => redirect()->route('admin.dashboard'),
-        'assistant_dg' => redirect()->route('assistant_dg.projects.create'),
+        'assistant_dg' => redirect()->route('assistant_dg.dashboard'),
         'dg' => redirect()->route('dg.dashboard'),
         'directeur_ecole' => redirect()->route('directeur_ecole.dashboard'),
         'juriste' => redirect()->route('juriste.dashboard'),
@@ -68,6 +68,9 @@ Route::middleware(['auth', 'verified', 'role:admin'])->group(function () {
 
     // Gestion des natures
     Route::get('/admin/natures', \App\Livewire\Admin\ManageNatures::class)->name('admin.natures.index');
+
+    // Référentiel juridique par défaut
+    Route::get('/admin/defaults', \App\Livewire\Admin\ManageDefaults::class)->name('admin.defaults.index');
 
     // Gestion des écoles
     Route::get('/admin/schools', [SchoolController::class, 'index'])->name('admin.schools.index');
@@ -187,6 +190,10 @@ Route::middleware(['auth', 'verified', 'role:juriste'])->group(function () {
     // Supprimer une tâche
     Route::delete('/juriste/tasks/{task}', [TaskController::class, 'destroy'])
         ->name('juriste.tasks.destroy');
+
+    // Référentiel juridique (nouveau composant complet)
+    Route::get('/juriste/projects/{project}/referentiel', \App\Livewire\Jurist\ReferentielJuridique::class)
+        ->name('juriste.projects.referentiel');
 
     // Émettre l'ODS (déblocage Chef)
     Route::post('/juriste/projects/{project}/emit-ods', [TaskController::class, 'emitOds'])

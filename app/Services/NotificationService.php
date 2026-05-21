@@ -2,298 +2,226 @@
 
 namespace App\Services;
 
-use App\Models\User;
-use App\Models\Project;
 use App\Models\Notification;
-use Illuminate\Support\Facades\DB;
+use App\Models\Project;
+use App\Models\User;
 
 class NotificationService
 {
-    /**
-     * Create a notification for users
-     *
-     * @param string $type
-     * @param string $title
-     * @param string $message
-     * @param array $userIds
-     * @param int|null $projectId
-     * @return void
-     */
-    public function create(string $type, string $title, string $message, array $userIds, ?int $projectId = null): void
+    private function notify(string $type, string $message, array $userIds, ?int $projectId = null, string $priority = 'normal'): void
     {
-        foreach ($userIds as $userId) {
+        foreach (array_unique($userIds) as $userId) {
             Notification::create([
-                'user_id' => $userId,
+                'user_id'    => $userId,
                 'project_id' => $projectId,
-                'type' => $type,
-                'title' => $title,
-                'message' => $message,
-                'is_read' => false,
+                'type'       => $type,
+                'message'    => $message,
+                'priority'   => $priority,
+                'is_read'    => false,
             ]);
         }
     }
 
-    /**
-     * Notify when a new project is created
-     *
-     * @param Project $project
-     * @return void
-     */
+    /** Notifie le DG qu'un nouveau projet a été soumis. */
     public function notifyNewProject(Project $project): void
     {
-        $title = 'Nouveau Projet Soumis';
-        $message = "Le projet '{$project->title}' a été soumis pour validation.";
-        
-        // Notify DG and Assistant DG
-        $users = User::whereIn('role', ['dg', 'assistant_dg'])->active()->get();
-        
-        $this->create('new_project', $title, $message, $users->pluck('id')->toArray(), $project->id);
+        $dgIds = User::where('role', 'dg')->where('is_active', true)->pluck('id')->toArray();
+        $this->notify(
+            'nouveau_projet',
+            "Nouveau projet soumis : « {$project->title} » (École {$project->school->name}).",
+            $dgIds,
+            $project->id
+        );
     }
 
-    /**
-     * Notify when project status changes
-     *
-     * @param Project $project
-     * @param string $oldStatus
-     * @param string $newStatus
-     * @return void
-     */
-    public function notifyStatusChange(Project $project, string $oldStatus, string $newStatus): void
+    /** Notifie le Directeur d'École que le DG lui a transmis un projet. */
+    public function notifyProjectTransmittedToDirector(Project $project): void
     {
-        $title = 'Changement de Statut';
-        $message = "Le projet '{$project->title}' est passé de '{$oldStatus}' à '{$newStatus}'.";
-        
-        // Notify relevant users based on project
-        $userIds = [];
-        
-        // Always notify the creator
-        $userIds[] = $project->created_by;
-        
-        // Notify school director if applicable
-        if ($project->school_id) {
-            $director = User::where('role', 'directeur_ecole')
-                ->where('school_id', $project->school_id)
-                ->where('is_active', true)
-                ->first();
-            if ($director) {
-                $userIds[] = $director->id;
-            }
+        $director = User::where('role', 'directeur_ecole')
+            ->where('school_id', $project->school_id)
+            ->where('is_active', true)
+            ->first();
+
+        if (!$director) return;
+
+        $this->notify(
+            'projet_transmis',
+            "Le DG vous a transmis le projet « {$project->title} » pour affectation.",
+            [$director->id],
+            $project->id
+        );
+    }
+
+    /** Notifie le Juriste et le Chef de Projet de leur affectation. */
+    public function notifyAssignment(Project $project): void
+    {
+        $ids = array_filter([$project->juriste_id, $project->chef_projet_id]);
+
+        $juriste = $project->juriste_id
+            ? "Vous avez été affecté(e) en tant que Juriste au projet « {$project->title} »."
+            : null;
+        $chef = $project->chef_projet_id
+            ? "Vous avez été affecté(e) en tant que Chef de Projet au projet « {$project->title} »."
+            : null;
+
+        if ($project->juriste_id && $juriste) {
+            $this->notify('affectation', $juriste, [$project->juriste_id], $project->id, 'urgent');
         }
-        
-        // Notify assigned jurist
-        if ($project->juriste_id) {
-            $userIds[] = $project->juriste_id;
+        if ($project->chef_projet_id && $chef) {
+            $this->notify('affectation', $chef, [$project->chef_projet_id], $project->id, 'urgent');
         }
-        
-        // Notify assigned chef de projet
-        if ($project->chef_projet_id) {
-            $userIds[] = $project->chef_projet_id;
-        }
-        
-        $userIds = array_unique($userIds);
-        
-        $this->create('status_change', $title, $message, $userIds, $project->id);
+    }
+
+    /** Notifie le Chef de Projet que son accès est débloqué (ODS Démarrage). */
+    public function notifyChefAccessUnlocked(Project $project): void
+    {
+        if (!$project->chef_projet_id) return;
+
+        $this->notify(
+            'ods_demarrage',
+            "L'ODS de Démarrage a été émis pour « {$project->title} ». Votre accès est maintenant actif.",
+            [$project->chef_projet_id],
+            $project->id,
+            'urgent'
+        );
+    }
+
+    /** Notifie le Directeur d'École et l'Assistant DG qu'un ODS Démarrage a été émis. */
+    public function notifyOdsDemarrage(Project $project): void
+    {
+        $ids = [];
+
+        $director = User::where('role', 'directeur_ecole')
+            ->where('school_id', $project->school_id)
+            ->where('is_active', true)->first();
+        if ($director) $ids[] = $director->id;
+
+        $assistants = User::where('role', 'assistant_dg')->where('is_active', true)->pluck('id');
+        foreach ($assistants as $id) $ids[] = $id;
+
+        $this->notify(
+            'ods_demarrage',
+            "ODS de Démarrage émis pour le projet « {$project->title} ».",
+            $ids,
+            $project->id
+        );
+    }
+
+    /** Notifie le Chef de Projet d'un ODS d'Arrêt (urgent). */
+    public function notifyOdsArret(Project $project): void
+    {
+        $ids = array_filter([$project->chef_projet_id]);
+
+        if (empty($ids)) return;
+
+        $this->notify(
+            'ods_arret',
+            "ARRÊT — ODS d'Arrêt émis pour le projet « {$project->title} ».",
+            $ids,
+            $project->id,
+            'urgent'
+        );
+    }
+
+    /** Notifie le Chef de Projet d'un ODS de Reprise (urgent). */
+    public function notifyOdsReprise(Project $project): void
+    {
+        $ids = array_filter([$project->chef_projet_id]);
+
+        if (empty($ids)) return;
+
+        $this->notify(
+            'ods_reprise',
+            "REPRISE — ODS de Reprise émis pour le projet « {$project->title} ».",
+            $ids,
+            $project->id,
+            'urgent'
+        );
     }
 
     /**
-     * Notify when budget alert threshold is reached (80%)
-     *
-     * @param Project $project
-     * @return void
+     * Alerte budgétaire 80 % : notifie Assistant DG, DG, Directeur École,
+     * Juriste et Chef de Projet. L'Admin ne reçoit PAS cette alerte.
      */
     public function notifyBudgetAlert(Project $project): void
     {
-        $title = 'Alerte Budget';
-        $message = "Le projet '{$project->title}' a atteint 80% de son budget. Consommation: {$project->budget_consumption_percent}%.";
-        
-        // Notify DG, Directeur d'École, Assistant DG
-        $userIds = [];
-        
-        // DG
-        $dg = User::where('role', 'dg')->where('is_active', true)->first();
-        if ($dg) {
-            $userIds[] = $dg->id;
-        }
-        
+        $ids = [];
+
         // Assistant DG
-        $assistantDg = User::where('role', 'assistant_dg')->where('is_active', true)->first();
-        if ($assistantDg) {
-            $userIds[] = $assistantDg->id;
-        }
-        
-        // Directeur d'École
-        if ($project->school_id) {
-            $director = User::where('role', 'directeur_ecole')
-                ->where('school_id', $project->school_id)
-                ->where('is_active', true)
-                ->first();
-            if ($director) {
-                $userIds[] = $director->id;
-            }
-        }
-        
-        $this->create('budget_alert', $title, $message, $userIds, $project->id);
-        
-        // Mark that budget alert was sent
-        $project->budget_alert_sent = true;
-        $project->save();
-    }
+        User::where('role', 'assistant_dg')->where('is_active', true)
+            ->pluck('id')->each(fn($id) => $ids[] = $id);
 
-    /**
-     * Notify when ODS is emitted
-     *
-     * @param Project $project
-     * @return void
-     */
-    public function notifyODSEmitted(Project $project): void
-    {
-        $title = 'ODS Émis';
-        $message = "Un ODS a été émis pour le projet '{$project->title}'.";
-        
-        // Notify DG, Directeur d'École, and the chef de projet
-        $userIds = [];
-        
         // DG
-        $dg = User::where('role', 'dg')->where('is_active', true)->first();
-        if ($dg) {
-            $userIds[] = $dg->id;
-        }
-        
-        // Directeur d'École
-        if ($project->school_id) {
-            $director = User::where('role', 'directeur_ecole')
-                ->where('school_id', $project->school_id)
-                ->where('is_active', true)
-                ->first();
-            if ($director) {
-                $userIds[] = $director->id;
-            }
-        }
-        
-        // Chef de Projet (if assigned)
-        if ($project->chef_projet_id) {
-            $userIds[] = $project->chef_projet_id;
-        }
-        
-        $this->create('ods_emitted', $title, $message, $userIds, $project->id);
-    }
+        User::where('role', 'dg')->where('is_active', true)
+            ->pluck('id')->each(fn($id) => $ids[] = $id);
 
-    /**
-     * Notify when chef de projet access is unlocked
-     *
-     * @param Project $project
-     * @return void
-     */
-    public function notifyChefAccessUnlocked(Project $project): void
-    {
-        if (!$project->chef_projet_id) {
-            return;
-        }
-        
-        $title = 'Accès Débloqué';
-        $message = "Votre accès au projet '{$project->title}' a été débloqué. Vous pouvez maintenant gérer les dépenses.";
-        
-        $this->create('chef_access_unlocked', $title, $message, [$project->chef_projet_id], $project->id);
-    }
+        // Directeur École
+        $director = User::where('role', 'directeur_ecole')
+            ->where('school_id', $project->school_id)
+            ->where('is_active', true)->first();
+        if ($director) $ids[] = $director->id;
 
-    /**
-     * Notify when project is archived
-     *
-     * @param Project $project
-     * @return void
-     */
-    public function notifyProjectArchived(Project $project): void
-    {
-        $title = 'Projet Archivé';
-        $message = "Le projet '{$project->title}' a été archivé.";
-        
-        // Notify all stakeholders
-        $userIds = [];
-        
-        // Creator
-        $userIds[] = $project->created_by;
-        
-        // School director
-        if ($project->school_id) {
-            $director = User::where('role', 'directeur_ecole')
-                ->where('school_id', $project->school_id)
-                ->where('is_active', true)
-                ->first();
-            if ($director) {
-                $userIds[] = $director->id;
-            }
-        }
-        
-        // Jurist
-        if ($project->juriste_id) {
-            $userIds[] = $project->juriste_id;
-        }
-        
+        // Juriste
+        if ($project->juriste_id) $ids[] = $project->juriste_id;
+
         // Chef de Projet
-        if ($project->chef_projet_id) {
-            $userIds[] = $project->chef_projet_id;
-        }
-        
-        // DG
-        $dg = User::where('role', 'dg')->where('is_active', true)->first();
-        if ($dg) {
-            $userIds[] = $dg->id;
-        }
-        
-        $userIds = array_unique($userIds);
-        
-        $this->create('project_archived', $title, $message, $userIds, $project->id);
+        if ($project->chef_projet_id) $ids[] = $project->chef_projet_id;
+
+        $pct = number_format(($project->expenses()->sum('amount') / $project->budget) * 100, 1);
+
+        $this->notify(
+            'alerte_budget',
+            "ALERTE BUDGET — Le projet « {$project->title} » a consommé {$pct} % de son budget.",
+            $ids,
+            $project->id,
+            'urgent'
+        );
+
+        $project->update(['budget_alert_sent' => true]);
     }
 
-    /**
-     * Mark notification as read
-     *
-     * @param int $notificationId
-     * @param int $userId
-     * @return bool
-     */
+    /** Notifie les parties prenantes que le projet est terminé/archivé. */
+    public function notifyProjectTerminated(Project $project): void
+    {
+        $ids = [];
+
+        if ($project->created_by) $ids[] = $project->created_by;
+        if ($project->juriste_id) $ids[] = $project->juriste_id;
+        if ($project->chef_projet_id) $ids[] = $project->chef_projet_id;
+
+        $director = User::where('role', 'directeur_ecole')
+            ->where('school_id', $project->school_id)
+            ->where('is_active', true)->first();
+        if ($director) $ids[] = $director->id;
+
+        User::where('role', 'dg')->where('is_active', true)
+            ->pluck('id')->each(fn($id) => $ids[] = $id);
+
+        $this->notify(
+            'projet_termine',
+            "Le projet « {$project->title} » a été clôturé et archivé.",
+            $ids,
+            $project->id
+        );
+    }
+
     public function markAsRead(int $notificationId, int $userId): bool
     {
-        $notification = Notification::where('id', $notificationId)
-            ->where('user_id', $userId)
-            ->first();
-        
-        if ($notification) {
-            $notification->is_read = true;
-            $notification->read_at = now();
-            $notification->save();
-            return true;
-        }
-        
-        return false;
+        $notif = Notification::where('id', $notificationId)->where('user_id', $userId)->first();
+        if (!$notif) return false;
+        $notif->update(['is_read' => true, 'read_at' => now()]);
+        return true;
     }
 
-    /**
-     * Mark all notifications as read for a user
-     *
-     * @param int $userId
-     * @return void
-     */
     public function markAllAsRead(int $userId): void
     {
         Notification::where('user_id', $userId)
             ->where('is_read', false)
-            ->update([
-                'is_read' => true,
-                'read_at' => now(),
-            ]);
+            ->update(['is_read' => true, 'read_at' => now()]);
     }
 
-    /**
-     * Get unread notifications count for a user
-     *
-     * @param int $userId
-     * @return int
-     */
     public function getUnreadCount(int $userId): int
     {
-        return Notification::where('user_id', $userId)
-            ->where('is_read', false)
-            ->count();
+        return Notification::where('user_id', $userId)->where('is_read', false)->count();
     }
 }

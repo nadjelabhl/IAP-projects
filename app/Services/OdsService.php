@@ -2,71 +2,65 @@
 
 namespace App\Services;
 
-use App\Models\Project;
 use App\Models\OdsRecord;
+use App\Models\Project;
+use App\Models\Task;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
 class OdsService
 {
-    protected NotificationService $notificationService;
+    public function __construct(
+        protected NotificationService $notificationService
+    ) {}
 
-    public function __construct(NotificationService $notificationService)
+    /**
+     * Vérifie si le juriste peut émettre l'ODS de Démarrage.
+     * Condition : toutes les phases cochées et leur somme = 100%.
+     */
+    public function canEmitDemarrage(Project $project): bool
     {
-        $this->notificationService = $notificationService;
+        $total = Task::where('project_id', $project->id)->sum('percentage');
+        $completed = Task::where('project_id', $project->id)
+            ->where('is_completed', true)
+            ->sum('percentage');
+
+        return $total >= 100 && $completed >= 100;
     }
 
     /**
-     * Check if a project can emit an ODS
-     * ODS is independent from tasks - it can be emitted based on project status
-     *
-     * @param Project $project
-     * @return bool
+     * Émet l'ODS de Démarrage.
+     * Change le statut du projet en 'En Cours', débloque l'accès Chef.
      */
-    public function canEmitODS(Project $project): bool
+    public function emitDemarrage(Project $project, User $juriste, ?string $notes = null): ?OdsRecord
     {
-        // ODS can be emitted for projects in "En Cours" or "Terminé" status
-        // It's independent from task completion percentage
-        return in_array($project->status, ['En Cours', 'Termine']);
-    }
-
-    /**
-     * Emit an ODS for a project
-     * This unlocks chef de projet access to manage expenses
-     *
-     * @param Project $project
-     * @param string $reason
-     * @param int|null $emittedBy
-     * @return OdsRecord|null
-     */
-    public function emitODS(Project $project, string $reason, ?int $emittedBy = null): ?OdsRecord
-    {
-        if (!$this->canEmitODS($project)) {
+        if (!$this->canEmitDemarrage($project)) {
             return null;
         }
 
         DB::beginTransaction();
         try {
-            // Create ODS record
             $ods = OdsRecord::create([
                 'project_id' => $project->id,
-                'emitted_by' => $emittedBy,
-                'emitted_at' => now(),
-                'reason' => $reason,
-                'status' => 'active',
+                'issued_by'  => $juriste->id,
+                'type'       => 'Demarrage',
+                'notes'      => $notes,
+                'issued_at'  => now(),
             ]);
 
-            // Unlock chef de projet access if assigned
-            if ($project->chef_projet_id) {
-                $project->chef_access_unlocked = true;
-                $project->save();
+            $project->update([
+                'status'               => 'En Cours',
+                'chef_access_unlocked' => true,
+                'started_at'           => now(),
+            ]);
 
-                // Notify chef de projet that access is unlocked
+            // Notifier le Chef de Projet
+            if ($project->chef_projet_id) {
                 $this->notificationService->notifyChefAccessUnlocked($project);
             }
 
-            // Notify relevant users about ODS emission
-            $this->notificationService->notifyODSEmitted($project);
+            // Notifier Directeur École
+            $this->notificationService->notifyOdsDemarrage($project);
 
             DB::commit();
             return $ods;
@@ -77,81 +71,61 @@ class OdsService
     }
 
     /**
-     * Get all ODS records for a project
-     *
-     * @param int $projectId
-     * @return \Illuminate\Database\Eloquent\Collection
+     * Émet un ODS d'Arrêt (incident technique).
      */
-    public function getProjectODS(int $projectId)
+    public function emitArret(Project $project, User $juriste, ?string $notes = null): ?OdsRecord
+    {
+        if ($project->status !== 'En Cours') {
+            return null;
+        }
+
+        $ods = OdsRecord::create([
+            'project_id' => $project->id,
+            'issued_by'  => $juriste->id,
+            'type'       => 'Arret',
+            'notes'      => $notes,
+            'issued_at'  => now(),
+        ]);
+
+        $this->notificationService->notifyOdsArret($project);
+
+        return $ods;
+    }
+
+    /**
+     * Émet un ODS de Reprise (incident résolu).
+     */
+    public function emitReprise(Project $project, User $juriste, ?string $notes = null): ?OdsRecord
+    {
+        if ($project->status !== 'En Cours') {
+            return null;
+        }
+
+        $ods = OdsRecord::create([
+            'project_id' => $project->id,
+            'issued_by'  => $juriste->id,
+            'type'       => 'Reprise',
+            'notes'      => $notes,
+            'issued_at'  => now(),
+        ]);
+
+        $this->notificationService->notifyOdsReprise($project);
+
+        return $ods;
+    }
+
+    public function getProjectOds(int $projectId)
     {
         return OdsRecord::where('project_id', $projectId)
-            ->with('emitter')
-            ->orderBy('emitted_at', 'desc')
+            ->with('issuedBy')
+            ->orderBy('issued_at', 'desc')
             ->get();
     }
 
-    /**
-     * Get active ODS for a project
-     *
-     * @param int $projectId
-     * @return OdsRecord|null
-     */
-    public function getActiveODS(int $projectId): ?OdsRecord
-    {
-        return OdsRecord::where('project_id', $projectId)
-            ->where('status', 'active')
-            ->first();
-    }
-
-    /**
-     * Cancel an ODS record
-     *
-     * @param int $odsId
-     * @param int|null $cancelledBy
-     * @return bool
-     */
-    public function cancelODS(int $odsId, ?int $cancelledBy = null): bool
-    {
-        $ods = OdsRecord::find($odsId);
-        
-        if (!$ods) {
-            return false;
-        }
-
-        $ods->status = 'cancelled';
-        $ods->cancelled_by = $cancelledBy;
-        $ods->cancelled_at = now();
-        $ods->save();
-
-        return true;
-    }
-
-    /**
-     * Check if chef de projet has access to manage expenses for a project
-     * Access is granted when ODS is emitted and chef_access_unlocked is true
-     *
-     * @param Project $project
-     * @param int $chefId
-     * @return bool
-     */
     public function hasChefAccess(Project $project, int $chefId): bool
     {
-        // Chef must be assigned to the project
-        if ($project->chef_projet_id !== $chefId) {
-            return false;
-        }
-
-        // Access must be unlocked via ODS
-        if (!$project->chef_access_unlocked) {
-            return false;
-        }
-
-        // There must be at least one active ODS
-        $activeODS = $this->getActiveODS($project->id);
-        if (!$activeODS) {
-            return false;
-        }
-
-        return true;
+        return $project->chef_projet_id === $chefId
+            && $project->chef_access_unlocked
+            && $project->status === 'En Cours';
     }
 }

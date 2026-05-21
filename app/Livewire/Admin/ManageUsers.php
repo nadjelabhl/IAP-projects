@@ -6,6 +6,7 @@ use Livewire\Attributes\Layout;
 use Livewire\Component;
 use App\Models\User;
 use App\Models\School;
+use Illuminate\Support\Facades\Hash;
 use Livewire\WithPagination;
 
 #[Layout('layouts.app')]
@@ -50,10 +51,10 @@ class ManageUsers extends Component
         $this->validate();
 
         User::create([
-            'name' => $this->name,
-            'email' => $this->email,
-            'password' => $this->password,
-            'role' => $this->role,
+            'name'      => $this->name,
+            'email'     => $this->email,
+            'password'  => Hash::make($this->password),
+            'role'      => $this->role,
             'school_id' => $this->school_id,
             'is_active' => $this->is_active,
         ]);
@@ -95,7 +96,7 @@ class ManageUsers extends Component
         ];
 
         if ($this->password) {
-            $data['password'] = $this->password;
+            $data['password'] = Hash::make($this->password);
         }
 
         $user->update($data);

@@ -1,132 +1,214 @@
-<div class="max-w-7xl mx-auto">
-    <!-- Header -->
-    <div class="bg-white rounded-2xl shadow-soft border-0 p-6 mb-6">
-        <h1 class="text-2xl font-bold text-iap-blue">Tableau de Bord - Chef de Projet</h1>
-        <p class="text-slate-500">Section 5 & 6 - Dépenses et Suivi Budget</p>
+<div class="max-w-7xl mx-auto space-y-6">
+
+    {{-- Flash --}}
+    @if(session('success'))
+        <div class="bg-green-50 border border-green-200 rounded-xl p-4 text-green-800 text-sm font-semibold">{{ session('success') }}</div>
+    @endif
+    @if(session('error'))
+        <div class="bg-red-50 border border-red-200 rounded-xl p-4 text-red-800 text-sm font-semibold">{{ session('error') }}</div>
+    @endif
+
+    {{-- Notifications ODS urgentes --}}
+    @foreach($notifications as $n)
+        <div class="flex items-start gap-3 px-5 py-4 rounded-xl
+            @if($n->type === 'ods_arret') bg-red-50 border border-red-200
+            @else bg-blue-50 border border-blue-200 @endif">
+            <svg class="w-5 h-5 flex-shrink-0 mt-0.5 @if($n->type === 'ods_arret') text-red-600 @else text-blue-600 @endif"
+                fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+            </svg>
+            <p class="text-sm @if($n->type === 'ods_arret') text-red-700 @else text-blue-700 @endif font-semibold">
+                {{ $n->message }}
+            </p>
+        </div>
+    @endforeach
+
+    {{-- Sélection du projet --}}
+    <div class="bg-white rounded-2xl shadow p-6">
+        <h2 class="font-bold text-slate-800 mb-4">Mes projets actifs</h2>
+        @forelse($myProjects as $proj)
+            <button wire:click="selectProject({{ $proj->id }})"
+                class="w-full text-left p-4 rounded-xl border-2 mb-3 transition
+                    @if($selectedProjectId == $proj->id) border-iap-orange bg-orange-50 @else border-slate-200 hover:border-slate-300 @endif">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="font-bold text-slate-900">{{ $proj->title }}</p>
+                        <p class="text-xs text-slate-500">{{ $proj->school->name }} &bull; {{ $proj->nature->name ?? '—' }}</p>
+                    </div>
+                    <span class="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-1 rounded-full">{{ $proj->status }}</span>
+                </div>
+            </button>
+        @empty
+            <div class="text-center py-8">
+                <p class="text-slate-400 font-semibold">Aucun projet actif.</p>
+                <p class="text-slate-400 text-sm mt-1">Votre accès est déverrouillé uniquement après l'ODS de Démarrage.</p>
+            </div>
+        @endforelse
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- Projects List -->
-        <div class="bg-white rounded-2xl shadow-soft border-0 overflow-hidden">
-            <div class="bg-iap-blue p-4">
-                <h2 class="text-lg font-bold text-white">Mes Projets</h2>
+    @if($selectedProject)
+        {{-- ====================================================================
+             JAUGE BUDGÉTAIRE (Composant E — Section 6)
+        ===================================================================== --}}
+        <div class="bg-white rounded-2xl shadow p-6">
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="font-bold text-slate-800">Consommation budgétaire</h3>
+                <span class="font-black text-2xl @if($budgetPct >= 80) text-red-600 @elseif($budgetPct >= 60) text-amber-600 @else text-blue-600 @endif">
+                    {{ number_format($budgetPct, 1) }} %
+                </span>
             </div>
-            <div class="p-4 space-y-2">
-                @forelse($projects as $project)
-                    <button wire:click="selectProject({{ $project->id }})"
-                        class="w-full text-left p-3 rounded-2xl border-0 shadow-soft {{ $selectedProject && $selectedProject->id === $project->id ? 'bg-iap-orange text-white' : 'bg-white hover:bg-iap-bg' }}">
-                        <div class="font-medium">{{ $project->title }}</div>
-                        <div class="text-xs text-slate-500">
-                            {{ $project->school->name ?? '-' }} -
-                            @if($project->chef_access_unlocked)
-                                <span class="text-green-600">✓ Accès débloqué</span>
-                            @else
-                                <span class="text-red-600">🔒 Accès bloqué</span>
-                            @endif
-                        </div>
-                    </button>
-                @empty
-                    <div class="text-sm text-slate-500 p-4">Aucun projet assigné</div>
-                @endforelse
+
+            <div class="w-full bg-slate-200 rounded-full h-5 overflow-hidden">
+                <div class="h-5 rounded-full transition-all duration-500
+                    @if($budgetPct >= 80) bg-red-500 @elseif($budgetPct >= 60) bg-amber-500 @else bg-blue-500 @endif"
+                    style="width:{{ min($budgetPct, 100) }}%">
+                </div>
+            </div>
+
+            @if($budgetPct >= 80)
+                <div class="mt-3 flex items-center gap-2 p-3 bg-red-50 rounded-xl border border-red-200">
+                    <svg class="w-5 h-5 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                    </svg>
+                    <p class="text-red-700 text-sm font-bold">ALERTE — Seuil de 80 % atteint. Les parties prenantes ont été notifiées.</p>
+                </div>
+            @endif
+
+            <div class="mt-4 grid grid-cols-3 gap-4 text-center">
+                <div class="bg-slate-50 rounded-xl p-3">
+                    <p class="text-xs text-slate-500">Budget total</p>
+                    <p class="font-black text-slate-700 mt-1">{{ number_format($selectedProject->budget, 0, ',', ' ') }} DA</p>
+                </div>
+                <div class="bg-slate-50 rounded-xl p-3">
+                    <p class="text-xs text-slate-500">Total dépensé</p>
+                    <p class="font-black @if($budgetPct >= 80) text-red-600 @else text-slate-700 @endif mt-1">
+                        {{ number_format($totalSpent, 0, ',', ' ') }} DA
+                    </p>
+                </div>
+                <div class="bg-slate-50 rounded-xl p-3">
+                    <p class="text-xs text-slate-500">Restant</p>
+                    <p class="font-black @if($budgetPct >= 80) text-red-600 @else text-green-600 @endif mt-1">
+                        {{ number_format(max(0, $selectedProject->budget - $totalSpent), 0, ',', ' ') }} DA
+                    </p>
+                </div>
             </div>
         </div>
 
-        <!-- Expense Manager -->
-        <div class="lg:col-span-2 bg-white rounded-2xl shadow-soft border-0 overflow-hidden">
-            <div class="bg-iap-blue p-4">
-                <h2 class="text-lg font-bold text-white">Suivi des Dépenses</h2>
-                <p class="text-slate-400 text-xs">Section 6 - Alerte à 80%</p>
+        {{-- ====================================================================
+             FORMULAIRE SAISIE DÉPENSE
+        ===================================================================== --}}
+        <div class="bg-white rounded-2xl shadow p-6">
+            <h3 class="font-bold text-slate-800 mb-4">Enregistrer une dépense</h3>
+            <form wire:submit="addExpense" class="space-y-4">
+                <div>
+                    <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Description</label>
+                    <input wire:model="expenseDescription" type="text" placeholder="Description de la dépense"
+                        class="mt-1 w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:border-iap-orange focus:ring-2 focus:ring-iap-orange/20 outline-none">
+                    @error('expenseDescription') <p class="text-red-600 text-xs mt-1">{{ $message }}</p> @enderror
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Montant (DA)</label>
+                        <input wire:model="expenseAmount" type="number" min="1" step="0.01" placeholder="0"
+                            class="mt-1 w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:border-iap-orange focus:ring-2 focus:ring-iap-orange/20 outline-none">
+                        @error('expenseAmount') <p class="text-red-600 text-xs mt-1">{{ $message }}</p> @enderror
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Date d'engagement</label>
+                        <input wire:model="expenseDate" type="date"
+                            class="mt-1 w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:border-iap-orange focus:ring-2 focus:ring-iap-orange/20 outline-none">
+                        @error('expenseDate') <p class="text-red-600 text-xs mt-1">{{ $message }}</p> @enderror
+                    </div>
+                </div>
+                <button type="submit"
+                    class="bg-iap-orange text-white font-bold px-8 py-3 rounded-xl hover:bg-orange-600 transition shadow">
+                    Enregistrer la dépense
+                </button>
+            </form>
+        </div>
+
+        {{-- ====================================================================
+             LISTE DES DÉPENSES
+        ===================================================================== --}}
+        <div class="bg-white rounded-2xl shadow overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                <h3 class="font-bold text-slate-800">Historique des dépenses</h3>
+                <span class="text-sm text-slate-500">{{ count($expenses) }} dépense(s)</span>
             </div>
 
-            @if($selectedProject)
-                <div class="p-4">
-                    <!-- Budget Info -->
-                    <div class="bg-iap-bg rounded-2xl p-3 mb-4">
-                        <div class="font-bold">{{ $selectedProject->title }}</div>
-                        <div class="grid grid-cols-3 gap-2 text-sm">
-                            <div>Budget: <span class="font-mono">{{ number_format($selectedProject->budget, 0, ',', ' ') }} DA</span></div>
-                            <div>Dépensé: <span class="font-mono text-red-600">{{ number_format($totalSpent, 0, ',', ' ') }} DA</span></div>
-                            <div>Restant: <span class="font-mono {{ $remainingBudget < 0 ? 'text-red-600' : 'text-green-600' }}">{{ number_format($remainingBudget, 0, ',', ' ') }} DA</span></div>
-                        </div>
-                        @if($selectedProject->budget_alert_sent)
-                            <div class="mt-2 text-xs bg-red-100 text-red-700 px-3 py-1 rounded-xl font-bold">
-                                ⚠️ ALERTE: Budget接近80%
-                            </div>
-                        @endif
+            @forelse($expenses as $expense)
+                <div class="flex items-center justify-between px-6 py-4 border-b border-slate-50 hover:bg-slate-50 transition">
+                    <div>
+                        <p class="font-semibold text-slate-800">{{ $expense->description }}</p>
+                        <p class="text-xs text-slate-400">{{ \Carbon\Carbon::parse($expense->expense_date)->format('d/m/Y') }}</p>
                     </div>
-
-                    <!-- Add Expense Form -->
-                    @if($selectedProject->chef_access_unlocked)
-                        <div class="mb-4 p-4 border-0 rounded-2xl shadow-soft">
-                            <h3 class="font-bold text-iap-blue mb-2">Enregistrer une dépense</h3>
-                            <div class="grid grid-cols-4 gap-2">
-                                <input type="text" wire:model="expenseDescription" placeholder="Description" class="col-span-2 rounded-xl border-0 shadow-soft bg-white px-3 py-2">
-                                <input type="number" wire:model="expenseAmount" placeholder="Montant (DA)" class="rounded-xl border-0 shadow-soft bg-white px-3 py-2">
-                                <input type="date" wire:model="expenseDate" class="rounded-xl border-0 shadow-soft bg-white px-3 py-2">
-                            </div>
-                            <button wire:click="addExpense" class="mt-2 bg-iap-orange text-white px-4 py-2 rounded-xl hover:bg-iap-blue transition-colors">Enregistrer</button>
-                        </div>
-                    @else
-                        <div class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-                            <p class="text-red-700">En attente de l'ODS du Juriste pour accéder aux dépenses.</p>
-                        </div>
-                    @endif
-
-                    <!-- Expenses List -->
-                    <table class="w-full">
-                        <thead>
-                            <tr class="bg-iap-bg border-b border-0">
-                                <th class="text-left p-2 text-xs uppercase tracking-wider font-bold text-slate-700">Date</th>
-                                <th class="text-left p-2 text-xs uppercase tracking-wider font-bold text-slate-700">Description</th>
-                                <th class="text-right p-2 text-xs uppercase tracking-wider font-bold text-slate-700">Montant</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($expenses as $expense)
-                                <tr class="border-b">
-                                    <td class="p-2 text-sm">{{ $expense->expense_date->format('d/m/Y') }}</td>
-                                    <td class="p-2 text-sm">{{ $expense->description }}</td>
-                                    <td class="p-2 text-sm text-right font-mono">{{ number_format($expense->amount, 0, ',', ' ') }} DA</td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="3" class="p-4 text-center text-slate-500">Aucune dépense</td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-
-                    <!-- Terminate Project -->
-                    @if($selectedProject->status === 'En Cours')
-                        <div class="mt-4 flex justify-end">
-                            <button wire:click="terminateProject" class="bg-iap-orange text-white px-4 py-2 rounded-xl hover:bg-iap-blue transition-colors">
-                                Terminer le Projet
-                            </button>
-                        </div>
-                    @endif
+                    <span class="font-black text-slate-700">{{ number_format($expense->amount, 0, ',', ' ') }} DA</span>
                 </div>
+            @empty
+                <div class="px-6 py-10 text-center text-slate-400">Aucune dépense enregistrée.</div>
+            @endforelse
+        </div>
+
+        {{-- ====================================================================
+             HISTORIQUE ODS
+        ===================================================================== --}}
+        @if($odsHistory->isNotEmpty())
+            <div class="bg-white rounded-2xl shadow p-6">
+                <h3 class="font-bold text-slate-800 mb-4">Ordres de Service</h3>
+                <div class="space-y-3">
+                    @foreach($odsHistory as $ods)
+                        <div class="flex items-center gap-4 p-3 rounded-xl border
+                            @if($ods->type === 'Demarrage') bg-green-50 border-green-200
+                            @elseif($ods->type === 'Arret') bg-red-50 border-red-200
+                            @else bg-blue-50 border-blue-200 @endif">
+                            <span class="font-bold text-sm
+                                @if($ods->type === 'Demarrage') text-green-700
+                                @elseif($ods->type === 'Arret') text-red-700
+                                @else text-blue-700 @endif">
+                                ODS {{ $ods->type }}
+                            </span>
+                            <span class="text-xs text-slate-500">
+                                {{ $ods->issued_at->format('d/m/Y H:i') }}
+                                @if($ods->issuedBy) &bull; {{ $ods->issuedBy->name }} @endif
+                            </span>
+                            @if($ods->notes)
+                                <span class="text-xs text-slate-500 flex-1 truncate italic">{{ $ods->notes }}</span>
+                            @endif
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        @endif
+
+        {{-- ====================================================================
+             CLÔTURE DU PROJET
+        ===================================================================== --}}
+        <div class="bg-white rounded-2xl shadow p-6 border-2 border-red-100">
+            <h3 class="font-bold text-slate-800 mb-2">Clôturer le projet</h3>
+            <p class="text-sm text-slate-500 mb-4">
+                Cette action est irréversible. Le projet sera marqué comme <strong>Terminé</strong> et archivé.
+            </p>
+
+            @if(!$confirmClose)
+                <button wire:click="$set('confirmClose', true)"
+                    class="bg-red-600 hover:bg-red-700 text-white font-bold px-6 py-3 rounded-xl transition">
+                    Clôturer le projet
+                </button>
             @else
-                <div class="p-8 text-center text-slate-500">
-                    Sélectionnez un projet pour gérer les dépenses
+                <div class="bg-red-50 border border-red-200 rounded-xl p-4 space-y-3">
+                    <p class="text-red-700 font-bold text-sm">Êtes-vous certain de vouloir clôturer ce projet ?</p>
+                    <div class="flex gap-3">
+                        <button wire:click="closeProject"
+                            class="bg-red-600 text-white font-bold px-6 py-2.5 rounded-xl hover:bg-red-700 transition">
+                            Oui, clôturer définitivement
+                        </button>
+                        <button wire:click="$set('confirmClose', false)"
+                            class="bg-slate-100 text-slate-700 font-bold px-6 py-2.5 rounded-xl hover:bg-slate-200 transition">
+                            Annuler
+                        </button>
+                    </div>
                 </div>
             @endif
         </div>
-    </div>
-
-    <!-- Notifications -->
-    <div class="mt-6 bg-white rounded-2xl shadow-soft border-0 overflow-hidden">
-        <div class="bg-iap-blue p-4">
-            <h2 class="text-lg font-bold text-white">Notifications</h2>
-        </div>
-        <div class="p-4">
-            @forelse($notifications as $notification)
-                <div class="p-3 border-b">
-                    <div class="text-sm">{{ $notification->message }}</div>
-                    <div class="text-xs text-slate-500">{{ $notification->created_at->diffForHumans() }}</div>
-                </div>
-            @empty
-                <div class="text-sm text-slate-500">Aucune notification</div>
-            @endforelse
-        </div>
-    </div>
+    @endif
 </div>

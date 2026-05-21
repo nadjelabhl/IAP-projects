@@ -3,414 +3,344 @@
 namespace Database\Seeders;
 
 use App\Models\Expense;
+use App\Models\LegalStep;
 use App\Models\Notification;
+use App\Models\OdsRecord;
 use App\Models\Project;
 use App\Models\ProjectNature;
+use App\Models\ProjectNatureDefault;
 use App\Models\School;
-use App\Models\Task;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
-    /**
-     * Seed the application's database.
-     */
     public function run(): void
     {
         // =====================================================================
-        // 1. CRÉER LES 4 ÉCOLES
+        // 1. ÉCOLES
         // =====================================================================
-        $schools = [
-            ['name' => 'École Boumerdes', 'location' => 'Boumerdes', 'annual_budget' => 500000000],
-            ['name' => 'École Arzew', 'location' => 'Arzew', 'annual_budget' => 450000000],
-            ['name' => 'École Skikda', 'location' => 'Skikda', 'annual_budget' => 480000000],
-            ['name' => 'École Hassi Messaoud', 'location' => 'Hassi Messaoud', 'annual_budget' => 520000000],
-        ];
-
-        $schoolModels = [];
-        foreach ($schools as $schoolData) {
-            $schoolModels[] = School::create($schoolData);
+        $schools = [];
+        foreach (['Boumerdes', 'Arzew', 'Skikda', 'Hassi Messaoud'] as $name) {
+            $schools[] = School::create(['name' => $name]);
         }
 
         // =====================================================================
-        // 2. CRÉER LES 5 NATURES DE PROJETS
+        // 2. NATURES DE PROJETS
         // =====================================================================
-        $natures = [
-            ['name' => 'Études', 'is_active' => true],
-            ['name' => 'Constructions', 'is_active' => true],
-            ['name' => 'Aménagements', 'is_active' => true],
-            ['name' => 'Équipements', 'is_active' => true],
-            ['name' => 'Terrains', 'is_active' => true],
-        ];
-
-        $natureModels = [];
-        foreach ($natures as $natureData) {
-            $natureModels[] = ProjectNature::create($natureData);
+        $natures = [];
+        foreach ([
+            'Études et Expertises',
+            'Constructions et Infrastructures',
+            'Aménagements et Rénovations',
+            'Équipements et Matériels',
+            'Terrains et Foncier',
+        ] as $name) {
+            $natures[] = ProjectNature::create(['name' => $name]);
         }
 
         // =====================================================================
-        // 3. CRÉER LES UTILISATEURS (23 au total, 6 rôles)
+        // 3. RÉFÉRENTIEL JURIDIQUE PAR DÉFAUT
         // =====================================================================
-        $users = [];
-
-        // Admin (1)
-        $users[] = User::create([
-            'name' => 'Admin IAP',
-            'email' => 'admin@iap.sonatrach.dz',
-            'password' => Hash::make('password123'),
-            'role' => 'admin',
-            'school_id' => null,
-            'is_active' => true,
-        ]);
-
-        // Assistant DG (1)
-        $users[] = User::create([
-            'name' => 'Assistant DG',
-            'email' => 'assistant.dg@iap.sonatrach.dz',
-            'password' => Hash::make('password123'),
-            'role' => 'assistant_dg',
-            'school_id' => null,
-            'is_active' => true,
-        ]);
-
-        // DG (1)
-        $users[] = User::create([
-            'name' => 'Directeur Général',
-            'email' => 'dg@iap.sonatrach.dz',
-            'password' => Hash::make('password123'),
-            'role' => 'dg',
-            'school_id' => null,
-            'is_active' => true,
-        ]);
-
-        // Directeurs d'École (4 - un par école)
-        foreach ($schoolModels as $index => $school) {
-            $users[] = User::create([
-                'name' => "Directeur École " . ($index + 1),
-                'email' => "directeur.ecole" . ($index + 1) . "@iap.sonatrach.dz",
-                'password' => Hash::make('password123'),
-                'role' => 'directeur_ecole',
-                'school_id' => $school->id,
-                'is_active' => true,
+        $defaults = [
+            [1, 'Constitution du dossier de Consultation', 15.00],
+            [2, 'Validation Juridique',                    15.00],
+            [3, 'Lancement de la consultation / AO',       20.00],
+            [4, 'Évaluation des offres',                   15.00],
+            [5, 'Désignation attributaire',                10.00],
+            [6, 'Établissement du Contrat',                15.00],
+            [7, 'Établissement ODS de Démarrage',          10.00],
+        ];
+        foreach ($defaults as [$order, $name, $pct]) {
+            ProjectNatureDefault::create([
+                'order_number' => $order,
+                'name'         => $name,
+                'percentage'   => $pct,
             ]);
         }
 
-        // Juristes (8 - 2 par école)
-        foreach ($schoolModels as $schoolIndex => $school) {
-            for ($i = 1; $i <= 2; $i++) {
-                $users[] = User::create([
-                    'name' => "Juriste École " . ($schoolIndex + 1) . " #" . $i,
-                    'email' => "juriste.ecole" . ($schoolIndex + 1) . "." . $i . "@iap.sonatrach.dz",
-                    'password' => Hash::make('password123'),
-                    'role' => 'juriste',
+        // =====================================================================
+        // 4. UTILISATEURS
+        // =====================================================================
+        $admin = User::create([
+            'name'      => 'Administrateur IAP',
+            'email'     => 'admin@iap.dz',
+            'password'  => Hash::make('password'),
+            'role'      => 'admin',
+            'is_active' => true,
+        ]);
+
+        $assistantDg = User::create([
+            'name'      => 'Karim Benali',
+            'email'     => 'assistant.dg@iap.dz',
+            'password'  => Hash::make('password'),
+            'role'      => 'assistant_dg',
+            'is_active' => true,
+        ]);
+
+        $dg = User::create([
+            'name'      => 'Mohammed Aïssa',
+            'email'     => 'dg@iap.dz',
+            'password'  => Hash::make('password'),
+            'role'      => 'dg',
+            'is_active' => true,
+        ]);
+
+        $directors = [];
+        $juristes  = [];
+        $chefs     = [];
+
+        $directorNames = ['Rachid Ferdi', 'Amel Kaci', 'Samir Hadj', 'Nadia Bouzid'];
+        $juristeNames  = [
+            ['Fatima Mahdi', 'Omar Sellam'],
+            ['Lina Charef', 'Yacine Dali'],
+            ['Samia Benkir', 'Bilal Rouane'],
+            ['Amina Lounis', 'Kamel Zerga'],
+        ];
+        $chefNames = [
+            ['Tarek Bensid', 'Meriem Ouali'],
+            ['Fares Amrani', 'Sonia Haddad'],
+            ['Ryad Drif', 'Dalila Mekki'],
+            ['Aziz Touati', 'Nabila Chikh'],
+        ];
+
+        foreach ($schools as $i => $school) {
+            $directors[$i] = User::create([
+                'name'      => $directorNames[$i],
+                'email'     => 'directeur.' . strtolower(str_replace(' ', '', $school->name)) . '@iap.dz',
+                'password'  => Hash::make('password'),
+                'role'      => 'directeur_ecole',
+                'school_id' => $school->id,
+                'is_active' => true,
+            ]);
+
+            foreach ($juristeNames[$i] as $j => $name) {
+                $juristes[$i][$j] = User::create([
+                    'name'      => $name,
+                    'email'     => 'juriste' . ($j + 1) . '.' . strtolower(str_replace(' ', '', $school->name)) . '@iap.dz',
+                    'password'  => Hash::make('password'),
+                    'role'      => 'juriste',
+                    'school_id' => $school->id,
+                    'is_active' => true,
+                ]);
+            }
+
+            foreach ($chefNames[$i] as $j => $name) {
+                $chefs[$i][$j] = User::create([
+                    'name'      => $name,
+                    'email'     => 'chef' . ($j + 1) . '.' . strtolower(str_replace(' ', '', $school->name)) . '@iap.dz',
+                    'password'  => Hash::make('password'),
+                    'role'      => 'chef_projet',
                     'school_id' => $school->id,
                     'is_active' => true,
                 ]);
             }
         }
 
-        // Chefs de Projet (8 - 2 par école)
-        foreach ($schoolModels as $schoolIndex => $school) {
-            for ($i = 1; $i <= 2; $i++) {
-                $users[] = User::create([
-                    'name' => "Chef de Projet École " . ($schoolIndex + 1) . " #" . $i,
-                    'email' => "chef.projet.ecole" . ($schoolIndex + 1) . "." . $i . "@iap.sonatrach.dz",
-                    'password' => Hash::make('password123'),
-                    'role' => 'chef_projet',
-                    'school_id' => $school->id,
-                    'is_active' => true,
-                ]);
-            }
+        // =====================================================================
+        // 5. PROJETS DE TEST
+        // =====================================================================
+
+        // Projet 1 — NOUVEAU (Boumerdes)
+        $p1 = Project::create([
+            'title'          => 'Étude de Faisabilité Infrastructure Pédagogique',
+            'nature_id'      => $natures[0]->id,
+            'type'           => 'Investissement',
+            'school_id'      => $schools[0]->id,
+            'created_by'     => $assistantDg->id,
+            'budget'         => 15000000,
+            'duration_months'=> 6,
+            'start_year'     => 2026,
+            'end_year'       => 2026,
+            'description'    => 'Étude de faisabilité pour la modernisation de l\'infrastructure pédagogique.',
+            'status'         => 'Nouveau',
+        ]);
+
+        // Projet 2 — EN ÉTUDE (Arzew, juriste affecté)
+        $p2 = Project::create([
+            'title'          => 'Construction Amphithéâtre Multimédia',
+            'nature_id'      => $natures[1]->id,
+            'type'           => 'Investissement',
+            'school_id'      => $schools[1]->id,
+            'created_by'     => $assistantDg->id,
+            'budget'         => 85000000,
+            'duration_months'=> 18,
+            'start_year'     => 2026,
+            'end_year'       => 2027,
+            'description'    => 'Construction d\'un amphithéâtre moderne équipé de systèmes multimédia.',
+            'status'         => 'En Etude',
+            'juriste_id'     => $juristes[1][0]->id,
+            'chef_projet_id' => $chefs[1][0]->id,
+            'dg_consulted_at'=> now()->subDays(10),
+            'school_director_viewed_at' => now()->subDays(8),
+        ]);
+
+        // Créer les phases juridiques pour p2 (depuis le référentiel par défaut)
+        foreach ($defaults as [$order, $name, $pct]) {
+            $isDemarrage = ($order === 7);
+            LegalStep::create([
+                'project_id'   => $p2->id,
+                'created_by'   => $juristes[1][0]->id,
+                'title'        => $name,
+                'percentage'   => $pct,
+                'sort_order'   => $order,
+                'is_deletable' => !$isDemarrage,
+                'is_completed' => $order <= 3,
+                'completed_at' => $order <= 3 ? now()->subDays(7 - $order) : null,
+                'checked_at'   => $order <= 3 ? now()->subDays(7 - $order) : null,
+            ]);
         }
 
-        // Indexer les utilisateurs par rôle pour faciliter les assignations
-        $usersByRole = [];
-        foreach ($users as $user) {
-            if (!isset($usersByRole[$user->role])) {
-                $usersByRole[$user->role] = [];
-            }
-            $usersByRole[$user->role][] = $user;
+        // Projet 3 — EN COURS (Skikda, ODS émis)
+        $p3 = Project::create([
+            'title'                => 'Aménagement Laboratoire de Géologie',
+            'nature_id'            => $natures[2]->id,
+            'type'                 => 'Exploitation',
+            'school_id'            => $schools[2]->id,
+            'created_by'           => $assistantDg->id,
+            'budget'               => 52000000,
+            'duration_months'      => 10,
+            'start_year'           => 2026,
+            'end_year'             => 2027,
+            'description'          => 'Réaménagement complet du laboratoire de géologie pétrolière.',
+            'status'               => 'En Cours',
+            'juriste_id'           => $juristes[2][0]->id,
+            'chef_projet_id'       => $chefs[2][0]->id,
+            'chef_access_unlocked' => true,
+            'dg_consulted_at'      => now()->subDays(20),
+            'school_director_viewed_at' => now()->subDays(18),
+            'started_at'           => now()->subDays(15),
+        ]);
+
+        // Toutes les phases cochées pour p3
+        foreach ($defaults as [$order, $name, $pct]) {
+            $isDemarrage = ($order === 7);
+            LegalStep::create([
+                'project_id'   => $p3->id,
+                'created_by'   => $juristes[2][0]->id,
+                'title'        => $name,
+                'percentage'   => $pct,
+                'sort_order'   => $order,
+                'is_deletable' => !$isDemarrage,
+                'is_completed' => true,
+                'completed_at' => now()->subDays(20 - $order),
+                'checked_at'   => now()->subDays(20 - $order),
+            ]);
+        }
+
+        // ODS Démarrage pour p3
+        OdsRecord::create([
+            'project_id' => $p3->id,
+            'issued_by'  => $juristes[2][0]->id,
+            'type'       => 'Demarrage',
+            'notes'      => 'ODS de démarrage émis après validation complète du référentiel juridique.',
+            'issued_at'  => now()->subDays(15),
+        ]);
+
+        // Dépenses pour p3 (75% du budget)
+        foreach ([
+            ['Matériaux de construction et finitions', 20000000, 14],
+            ['Main d\'œuvre spécialisée',              15000000, 10],
+            ['Équipements de laboratoire',              4000000,  5],
+        ] as [$desc, $amount, $daysAgo]) {
+            Expense::create([
+                'project_id'   => $p3->id,
+                'entered_by'   => $chefs[2][0]->id,
+                'description'  => $desc,
+                'amount'       => $amount,
+                'expense_date' => now()->subDays($daysAgo),
+            ]);
+        }
+
+        // Projet 4 — TERMINÉ (Hassi Messaoud)
+        $p4 = Project::create([
+            'title'                => 'Installation Équipements de Forage Pédagogique',
+            'nature_id'            => $natures[3]->id,
+            'type'                 => 'Investissement',
+            'school_id'            => $schools[3]->id,
+            'created_by'           => $assistantDg->id,
+            'budget'               => 120000000,
+            'duration_months'      => 12,
+            'start_year'           => 2025,
+            'end_year'             => 2026,
+            'description'          => 'Installation des équipements de forage pédagogique de nouvelle génération.',
+            'status'               => 'Termine',
+            'juriste_id'           => $juristes[3][0]->id,
+            'chef_projet_id'       => $chefs[3][0]->id,
+            'chef_access_unlocked' => true,
+            'dg_consulted_at'      => now()->subDays(90),
+            'started_at'           => now()->subDays(80),
+            'closed_at'            => now()->subDays(5),
+            'budget_alert_sent'    => true,
+        ]);
+
+        // Dépenses pour p4 (100% du budget)
+        foreach ([
+            ['Équipements de forage',    80000000, 60],
+            ['Installation et câblage',  25000000, 40],
+            ['Formation et certification', 15000000, 20],
+        ] as [$desc, $amount, $daysAgo]) {
+            Expense::create([
+                'project_id'   => $p4->id,
+                'entered_by'   => $chefs[3][0]->id,
+                'description'  => $desc,
+                'amount'       => $amount,
+                'expense_date' => now()->subDays($daysAgo),
+            ]);
         }
 
         // =====================================================================
-        // 4. CRÉER LES PROJETS DE TEST (4 projets dans les 4 statuts)
+        // 6. NOTIFICATIONS DE TEST
         // =====================================================================
-
-        // Projet 1 : Statut NOUVEAU
-        $project1 = Project::create([
-            'title' => 'Étude de Faisabilité - Boumerdes',
-            'nature_id' => $natureModels[0]->id, // Études
-            'type' => 'Investissement',
-            'school_id' => $schoolModels[0]->id, // Boumerdes
-            'created_by' => $usersByRole['assistant_dg'][0]->id,
-            'budget' => 50000000,
-            'duration_months' => 6,
-            'start_year' => 2026,
-            'end_year' => 2026,
-            'address' => 'Boumerdes, Algérie',
-            'description' => 'Étude de faisabilité pour le projet de développement',
-            'status' => 'Nouveau',
-            'juriste_id' => null,
-            'chef_projet_id' => null,
-            'chef_access_unlocked' => false,
-            'budget_alert_sent' => false,
-        ]);
-
-        // Projet 2 : Statut EN ÉTUDE (avec juriste assigné)
-        $project2 = Project::create([
-            'title' => 'Construction Centre de Formation - Arzew',
-            'nature_id' => $natureModels[1]->id, // Constructions
-            'type' => 'Investissement',
-            'school_id' => $schoolModels[1]->id, // Arzew
-            'created_by' => $usersByRole['assistant_dg'][0]->id,
-            'budget' => 120000000,
-            'duration_months' => 18,
-            'start_year' => 2026,
-            'end_year' => 2027,
-            'address' => 'Arzew, Algérie',
-            'description' => 'Construction d\'un centre de formation moderne',
-            'status' => 'En Etude',
-            'juriste_id' => $usersByRole['juriste'][2]->id, // Juriste Arzew #1
-            'chef_projet_id' => null,
-            'chef_access_unlocked' => false,
-            'budget_alert_sent' => false,
-        ]);
-
-        // Projet 3 : Statut EN COURS (avec ODS émise, Chef de Projet assigné)
-        $project3 = Project::create([
-            'title' => 'Aménagement Laboratoire - Skikda',
-            'nature_id' => $natureModels[2]->id, // Aménagements
-            'type' => 'Exploitation',
-            'school_id' => $schoolModels[2]->id, // Skikda
-            'created_by' => $usersByRole['assistant_dg'][0]->id,
-            'budget' => 80000000,
-            'duration_months' => 12,
-            'start_year' => 2026,
-            'end_year' => 2026,
-            'address' => 'Skikda, Algérie',
-            'description' => 'Aménagement complet du laboratoire principal',
-            'status' => 'En Cours',
-            'juriste_id' => $usersByRole['juriste'][4]->id, // Juriste Skikda #1
-            'chef_projet_id' => $usersByRole['chef_projet'][4]->id, // Chef Skikda #1
-            'chef_access_unlocked' => true,
-            'budget_alert_sent' => false,
-        ]);
-
-        // Projet 4 : Statut TERMINÉ (archivé)
-        $project4 = Project::create([
-            'title' => 'Installation Équipements - Hassi Messaoud',
-            'nature_id' => $natureModels[3]->id, // Équipements
-            'type' => 'Investissement',
-            'school_id' => $schoolModels[3]->id, // Hassi Messaoud
-            'created_by' => $usersByRole['assistant_dg'][0]->id,
-            'budget' => 95000000,
-            'duration_months' => 9,
-            'start_year' => 2025,
-            'end_year' => 2026,
-            'address' => 'Hassi Messaoud, Algérie',
-            'description' => 'Installation des équipements de recherche',
-            'status' => 'Termine',
-            'juriste_id' => $usersByRole['juriste'][6]->id, // Juriste Hassi #1
-            'chef_projet_id' => $usersByRole['chef_projet'][6]->id, // Chef Hassi #1
-            'chef_access_unlocked' => true,
-            'budget_alert_sent' => false,
-            'closed_at' => now()->subDays(30),
-        ]);
-
-        // =====================================================================
-        // 5. CRÉER LES TÂCHES (TO-DO LIST) POUR LES PROJETS EN ÉTUDE ET EN COURS
-        // =====================================================================
-
-        // Tâches pour Projet 2 (EN ÉTUDE) - Somme = 100%
-        Task::create([
-            'project_id' => $project2->id,
-            'created_by' => $usersByRole['juriste'][2]->id,
-            'title' => 'Validation juridique des contrats',
-            'percentage' => 35,
-            'is_completed' => true,
-            'completed_at' => now()->subDays(5),
-            'sort_order' => 1,
-        ]);
-
-        Task::create([
-            'project_id' => $project2->id,
-            'created_by' => $usersByRole['juriste'][2]->id,
-            'title' => 'Vérification conformité réglementaire',
-            'percentage' => 30,
-            'is_completed' => true,
-            'completed_at' => now()->subDays(3),
-            'sort_order' => 2,
-        ]);
-
-        Task::create([
-            'project_id' => $project2->id,
-            'created_by' => $usersByRole['juriste'][2]->id,
-            'title' => 'Approbation des autorités compétentes',
-            'percentage' => 35,
-            'is_completed' => false,
-            'completed_at' => null,
-            'sort_order' => 3,
-        ]);
-
-        // Tâches pour Projet 3 (EN COURS) - Somme = 100% (déjà complétées pour ODS)
-        Task::create([
-            'project_id' => $project3->id,
-            'created_by' => $usersByRole['juriste'][4]->id,
-            'title' => 'Validation des plans techniques',
-            'percentage' => 40,
-            'is_completed' => true,
-            'completed_at' => now()->subDays(15),
-            'sort_order' => 1,
-        ]);
-
-        Task::create([
-            'project_id' => $project3->id,
-            'created_by' => $usersByRole['juriste'][4]->id,
-            'title' => 'Approbation budgétaire',
-            'percentage' => 30,
-            'is_completed' => true,
-            'completed_at' => now()->subDays(12),
-            'sort_order' => 2,
-        ]);
-
-        Task::create([
-            'project_id' => $project3->id,
-            'created_by' => $usersByRole['juriste'][4]->id,
-            'title' => 'Signature des documents',
-            'percentage' => 30,
-            'is_completed' => true,
-            'completed_at' => now()->subDays(10),
-            'sort_order' => 3,
-        ]);
-
-        // =====================================================================
-        // 6. CRÉER LES DÉPENSES (EXPENSES) POUR LES PROJETS EN COURS ET TERMINÉ
-        // =====================================================================
-
-        // Dépenses pour Projet 3 (EN COURS) - 75% du budget (pas d'alerte 80%)
-        Expense::create([
-            'project_id' => $project3->id,
-            'entered_by' => $usersByRole['chef_projet'][4]->id,
-            'description' => 'Matériaux de construction',
-            'amount' => 30000000,
-            'expense_date' => now()->subDays(20),
-        ]);
-
-        Expense::create([
-            'project_id' => $project3->id,
-            'entered_by' => $usersByRole['chef_projet'][4]->id,
-            'description' => 'Main d\'œuvre',
-            'amount' => 25000000,
-            'expense_date' => now()->subDays(15),
-        ]);
-
-        Expense::create([
-            'project_id' => $project3->id,
-            'entered_by' => $usersByRole['chef_projet'][4]->id,
-            'description' => 'Équipements spécialisés',
-            'amount' => 25000000,
-            'expense_date' => now()->subDays(10),
-        ]);
-
-        // Dépenses pour Projet 4 (TERMINÉ) - 100% du budget
-        Expense::create([
-            'project_id' => $project4->id,
-            'entered_by' => $usersByRole['chef_projet'][6]->id,
-            'description' => 'Équipements de recherche',
-            'amount' => 60000000,
-            'expense_date' => now()->subDays(60),
-        ]);
-
-        Expense::create([
-            'project_id' => $project4->id,
-            'entered_by' => $usersByRole['chef_projet'][6]->id,
-            'description' => 'Installation et configuration',
-            'amount' => 25000000,
-            'expense_date' => now()->subDays(45),
-        ]);
-
-        Expense::create([
-            'project_id' => $project4->id,
-            'entered_by' => $usersByRole['chef_projet'][6]->id,
-            'description' => 'Formation du personnel',
-            'amount' => 10000000,
-            'expense_date' => now()->subDays(30),
-        ]);
-
-        // =====================================================================
-        // 7. CRÉER LES NOTIFICATIONS DE TEST
-        // =====================================================================
-
-        // Notification pour DG : Nouveau projet soumis
         Notification::create([
-            'user_id' => $usersByRole['dg'][0]->id,
-            'project_id' => $project1->id,
-            'type' => 'nouveau_projet',
-            'message' => 'Un nouveau projet a été soumis : "' . $project1->title . '"',
-            'priority' => 'normal',
-            'is_read' => false,
+            'user_id'    => $dg->id,
+            'project_id' => $p1->id,
+            'type'       => 'nouveau_projet',
+            'message'    => "Nouveau projet soumis : « {$p1->title} » (École {$schools[0]->name}).",
+            'priority'   => 'normal',
+            'is_read'    => false,
         ]);
 
-        // Notification pour Directeur Arzew : Projet transmis
         Notification::create([
-            'user_id' => $schoolModels[1]->users()->where('role', 'directeur_ecole')->first()->id,
-            'project_id' => $project2->id,
-            'type' => 'projet_transmis',
-            'message' => 'Le projet "' . $project2->title . '" vous a été transmis pour affectation.',
-            'priority' => 'normal',
-            'is_read' => false,
+            'user_id'    => $juristes[1][0]->id,
+            'project_id' => $p2->id,
+            'type'       => 'affectation',
+            'message'    => "Vous avez été affecté(e) en tant que Juriste au projet « {$p2->title} ».",
+            'priority'   => 'urgent',
+            'is_read'    => false,
         ]);
 
-        // Notification pour Juriste Arzew : Affectation
         Notification::create([
-            'user_id' => $usersByRole['juriste'][2]->id,
-            'project_id' => $project2->id,
-            'type' => 'affectation',
-            'message' => 'Vous avez été affecté au projet "' . $project2->title . '" en tant que Juriste.',
-            'priority' => 'urgent',
-            'is_read' => false,
+            'user_id'    => $chefs[2][0]->id,
+            'project_id' => $p3->id,
+            'type'       => 'ods_demarrage',
+            'message'    => "L'ODS de Démarrage a été émis pour « {$p3->title} ». Votre accès est maintenant actif.",
+            'priority'   => 'urgent',
+            'is_read'    => false,
         ]);
 
-        // Notification pour Chef Skikda : ODS émise
         Notification::create([
-            'user_id' => $usersByRole['chef_projet'][4]->id,
-            'project_id' => $project3->id,
-            'type' => 'ods_emise',
-            'message' => 'L\'ODS du projet "' . $project3->title . '" a été émise. Votre accès est maintenant débloqué.',
-            'priority' => 'urgent',
-            'is_read' => false,
+            'user_id'    => $directors[3]->id,
+            'project_id' => $p4->id,
+            'type'       => 'projet_termine',
+            'message'    => "Le projet « {$p4->title} » a été clôturé et archivé.",
+            'priority'   => 'normal',
+            'is_read'    => true,
+            'read_at'    => now()->subDays(5),
         ]);
 
-        // Notification pour Directeur Skikda : Alerte budget 80%
-        Notification::create([
-            'user_id' => $schoolModels[2]->users()->where('role', 'directeur_ecole')->first()->id,
-            'project_id' => $project3->id,
-            'type' => 'alerte_budget',
-            'message' => 'ALERTE : Le projet "' . $project3->title . '" a atteint 75% de son budget.',
-            'priority' => 'urgent',
-            'is_read' => false,
-        ]);
-
-        // Notification pour Directeur Hassi : Archivage
-        Notification::create([
-            'user_id' => $schoolModels[3]->users()->where('role', 'directeur_ecole')->first()->id,
-            'project_id' => $project4->id,
-            'type' => 'archivage',
-            'message' => 'Le projet "' . $project4->title . '" a été archivé avec succès.',
-            'priority' => 'normal',
-            'is_read' => true,
-            'read_at' => now()->subDays(30),
-        ]);
-
-        $this->command->info('✅ DatabaseSeeder exécuté avec succès !');
-        $this->command->info('   - 4 écoles créées');
-        $this->command->info('   - 5 natures de projets créées');
-        $this->command->info('   - 23 utilisateurs créés (6 rôles)');
-        $this->command->info('   - 4 projets de test créés (4 statuts)');
-        $this->command->info('   - 6 tâches créées');
-        $this->command->info('   - 6 dépenses créées');
-        $this->command->info('   - 7 notifications créées');
+        $this->command->info('Seeder exécuté avec succès.');
+        $this->command->info('  4 écoles | 5 natures | 7 phases par défaut');
+        $this->command->info('  1 admin | 1 assistant DG | 1 DG | 4 directeurs | 8 juristes | 8 chefs');
+        $this->command->info('  4 projets de test (Nouveau, En Etude, En Cours, Termine)');
+        $this->command->line('');
+        $this->command->info('Comptes de connexion (mot de passe : password) :');
+        $this->command->info('  admin@iap.dz        → Admin');
+        $this->command->info('  assistant.dg@iap.dz → Assistant DG');
+        $this->command->info('  dg@iap.dz           → Directeur Général');
+        $this->command->info('  directeur.boumerdes@iap.dz → Directeur École Boumerdes');
+        $this->command->info('  juriste1.boumerdes@iap.dz  → Juriste Boumerdes');
+        $this->command->info('  chef1.boumerdes@iap.dz     → Chef de Projet Boumerdes');
     }
 }

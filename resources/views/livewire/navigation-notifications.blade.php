@@ -13,7 +13,7 @@
 
     <!-- Notification Dropdown -->
     <div x-show="open" @click.away="open = false" x-cloak
-         class="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden z-50">
+        class="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden z-50">
         <div class="p-4 border-b border-slate-100">
             <h3 class="font-bold text-iap-blue">Notifications</h3>
         </div>

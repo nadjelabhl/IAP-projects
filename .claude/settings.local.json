@@ -2,7 +2,16 @@
   "permissions": {
     "allow": [
       "Bash(php artisan migrate:fresh --seed)",
-      "Bash(npm run build)"
+      "Bash(npm run build)",
+      "Bash(php artisan *)",
+      "Bash(php -l app/Livewire/Jurist/ReferentielJuridique.php)",
+      "Bash(php -l app/Livewire/Admin/ManageDefaults.php)",
+      "Bash(php -l app/Livewire/Director/DashboardDirector.php)",
+      "Bash(php -l app/Livewire/Chef/DashboardChef.php)",
+      "Bash(php -l app/Services/OdsService.php)",
+      "Bash(php -l app/Livewire/Dg/DashboardDg.php)",
+      "Bash(php -l app/Livewire/AssistantDg/Dashboard.php)",
+      "Bash(php -l app/Models/Project.php)"
     ]
   }
 }

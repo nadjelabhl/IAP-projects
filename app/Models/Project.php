@@ -21,21 +21,26 @@ class Project extends Model
         'end_year',
         'address',
         'description',
+        'pdf_path',
         'status',
         'juriste_id',
         'chef_projet_id',
         'chef_access_unlocked',
         'dg_consulted_at',
+        'school_director_viewed_at',
+        'started_at',
         'budget_alert_sent',
-        'closed_at'
+        'closed_at',
     ];
 
     protected $casts = [
-        'chef_access_unlocked' => 'boolean',
-        'budget_alert_sent' => 'boolean',
-        'dg_consulted_at' => 'datetime',
-        'closed_at' => 'datetime',
-        'budget' => 'decimal:2',
+        'chef_access_unlocked'       => 'boolean',
+        'budget_alert_sent'          => 'boolean',
+        'dg_consulted_at'            => 'datetime',
+        'school_director_viewed_at'  => 'datetime',
+        'started_at'                 => 'datetime',
+        'closed_at'                  => 'datetime',
+        'budget'                     => 'decimal:2',
     ];
 
     /*
@@ -72,6 +77,11 @@ class Project extends Model
     public function tasks(): HasMany
     {
         return $this->hasMany(Task::class, 'project_id');
+    }
+
+    public function legalSteps(): HasMany
+    {
+        return $this->hasMany(\App\Models\LegalStep::class, 'project_id')->orderBy('sort_order');
     }
 
     public function expenses(): HasMany
