@@ -265,12 +265,37 @@ class Project extends Model
     }
 
     /**
+     * Avancement juridique = SUM des pourcentages des phases COCHÉES
+     * Différent de canEmitODS() qui vérifie la somme totale
+     */
+    public function getLegalProgressAttribute(): float
+    {
+        return (float) $this->legalSteps()->where('is_completed', true)->sum('percentage');
+    }
+
+    /**
+     * Avancement technique = consommation budgétaire (même indicateur)
+     */
+    public function getTechniqueProgressAttribute(): float
+    {
+        return $this->getBudgetConsumptionPercentAttribute();
+    }
+
+    /**
      * Vérifier si le Chef de Projet peut accéder au projet
-     * Condition : ODS émise (status EN COURS) ET chef_access_unlocked = true
+     * RÈGLE CRITIQUE : legal_progress = 100% ET ODS de Démarrage émis (started_at IS NOT NULL)
+     */
+    public function isAccessibleForChef(): bool
+    {
+        return $this->legal_progress >= 100.0 && $this->started_at !== null;
+    }
+
+    /**
+     * Alias pour isAccessibleForChef()
      */
     public function canChefAccess(): bool
     {
-        return $this->status === 'En Cours' && $this->chef_access_unlocked === true;
+        return $this->isAccessibleForChef();
     }
 
     /**

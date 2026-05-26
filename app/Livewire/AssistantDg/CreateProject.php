@@ -19,7 +19,6 @@ class CreateProject extends Component
         $this->notificationService = $notificationService;
     }
 
-    // Champs du formulaire (selon tes specs - Section 1)
     public $title;
     public $nature_id;
     public $type = 'Investissement';
@@ -32,44 +31,59 @@ class CreateProject extends Component
     public $description;
 
     protected $rules = [
-        'title' => 'required|min:5',
-        'nature_id' => 'required',
-        'type' => 'required|in:Investissement,Exploitation',
-        'school_id' => 'required',
-        'budget' => 'required|numeric|min:1000',
+        'title'           => 'required|min:5',
+        'nature_id'       => 'required',
+        'type'            => 'required|in:Investissement,Exploitation',
+        'school_id'       => 'required',
+        'budget'          => 'required|numeric|min:1000',
         'duration_months' => 'required|integer|min:1',
-        'start_year' => 'required|integer|min:2024|max:2050',
-        'end_year' => 'required|integer|min:2024|max:2050|gte:start_year',
-        'address' => 'required',
+        'start_year'      => 'required|integer|min:2024|max:2050',
+        'end_year'        => 'required|integer|min:2024|max:2050|gte:start_year',
+        'address'         => 'required',
+    ];
+
+    protected $messages = [
+        'title.required'           => 'Le titre du projet est obligatoire.',
+        'title.min'                => 'Le titre doit contenir au moins 5 caractères.',
+        'nature_id.required'       => 'La nature du projet est obligatoire.',
+        'type.required'            => 'Le type de projet est obligatoire.',
+        'school_id.required'       => 'L\'école concernée est obligatoire.',
+        'budget.required'          => 'Le budget estimé est obligatoire.',
+        'budget.numeric'           => 'Le budget doit être un nombre.',
+        'budget.min'               => 'Le budget doit être d\'au moins 1 000 KDA.',
+        'duration_months.required' => 'La durée est obligatoire.',
+        'duration_months.integer'  => 'La durée doit être un nombre entier.',
+        'duration_months.min'      => 'La durée doit être d\'au moins 1 mois.',
+        'start_year.required'      => 'L\'année de début est obligatoire.',
+        'start_year.integer'       => 'L\'année de début doit être un entier.',
+        'end_year.required'        => 'L\'année de fin est obligatoire.',
+        'end_year.gte'             => 'L\'année de fin doit être supérieure ou égale à l\'année de début.',
+        'address.required'         => 'L\'adresse / localisation est obligatoire.',
     ];
 
     public function save()
     {
         $this->validate();
 
-        // 1. Enregistrement du projet (Statut: Nouveau)
         $project = Project::create([
-            'title' => $this->title,
-            'nature_id' => $this->nature_id,
-            'type' => $this->type,
-            'school_id' => $this->school_id,
-            'created_by' => auth()->id(),
-            'budget' => $this->budget,
+            'title'           => $this->title,
+            'nature_id'       => $this->nature_id,
+            'type'            => $this->type,
+            'school_id'       => $this->school_id,
+            'created_by'      => auth()->id(),
+            'budget'          => $this->budget,
             'duration_months' => $this->duration_months,
-            'start_year' => $this->start_year,
-            'end_year' => $this->end_year,
-            'address' => $this->address,
-            'description' => $this->description,
-            'status' => 'Nouveau', // Statut initial obligatoire
+            'start_year'      => $this->start_year,
+            'end_year'        => $this->end_year,
+            'address'         => $this->address,
+            'description'     => $this->description,
+            'status'          => 'Nouveau',
         ]);
 
-        // 2. Notification automatique pour le DG (Section 7)
         $this->notificationService->notifyNewProject($project);
 
-        // Message de succès
         session()->flash('message', 'Projet enregistré avec succès et transmis au DG.');
 
-        // Reset du formulaire
         $this->reset();
 
         return redirect()->route('dashboard');

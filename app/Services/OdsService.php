@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\LegalStep;
 use App\Models\OdsRecord;
 use App\Models\Project;
 use App\Models\Task;
@@ -40,11 +41,16 @@ class OdsService
 
         DB::beginTransaction();
         try {
+            $lastStep = LegalStep::where('project_id', $project->id)
+                ->orderBy('sort_order', 'desc')
+                ->first();
+
             $ods = OdsRecord::create([
                 'project_id' => $project->id,
                 'issued_by'  => $juriste->id,
                 'type'       => 'Demarrage',
                 'notes'      => $notes,
+                'pdf_path'   => $lastStep?->pdf_path,
                 'issued_at'  => now(),
             ]);
 
@@ -73,7 +79,7 @@ class OdsService
     /**
      * Émet un ODS d'Arrêt (incident technique).
      */
-    public function emitArret(Project $project, User $juriste, ?string $notes = null): ?OdsRecord
+    public function emitArret(Project $project, User $juriste, ?string $notes = null, ?string $pdfPath = null): ?OdsRecord
     {
         if ($project->status !== 'En Cours') {
             return null;
@@ -84,6 +90,7 @@ class OdsService
             'issued_by'  => $juriste->id,
             'type'       => 'Arret',
             'notes'      => $notes,
+            'pdf_path'   => $pdfPath,
             'issued_at'  => now(),
         ]);
 
@@ -95,7 +102,7 @@ class OdsService
     /**
      * Émet un ODS de Reprise (incident résolu).
      */
-    public function emitReprise(Project $project, User $juriste, ?string $notes = null): ?OdsRecord
+    public function emitReprise(Project $project, User $juriste, ?string $notes = null, ?string $pdfPath = null): ?OdsRecord
     {
         if ($project->status !== 'En Cours') {
             return null;
@@ -106,6 +113,7 @@ class OdsService
             'issued_by'  => $juriste->id,
             'type'       => 'Reprise',
             'notes'      => $notes,
+            'pdf_path'   => $pdfPath,
             'issued_at'  => now(),
         ]);
 

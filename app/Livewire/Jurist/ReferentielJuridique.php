@@ -22,6 +22,7 @@ class ReferentielJuridique extends Component
     // Formulaire ajout
     public string $newTitle      = '';
     public float  $newPercentage = 0;
+    public int    $newOrder      = 1;
 
     // Modale édition
     public bool   $editModalOpen  = false;
@@ -39,6 +40,8 @@ class ReferentielJuridique extends Component
     public bool   $odsRepriseModalOpen = false;
     public string $odsArretNotes       = '';
     public string $odsRepriseNotes     = '';
+    public $odsArretPdf;
+    public $odsReprisePdf;
 
     // Upload PDF par phase (stocke l'ID de la phase à uploader)
     public ?int $uploadingStepId = null;
@@ -64,6 +67,11 @@ class ReferentielJuridique extends Component
         if ($project->legalSteps()->count() === 0) {
             $this->seedFromDefaults();
         }
+
+        // Default new order = position just before the ODS step
+        $odsStep = LegalStep::where('project_id', $project->id)
+            ->where('is_deletable', false)->first();
+        $this->newOrder = $odsStep ? max(1, $odsStep->sort_order) : 1;
     }
 
     private function seedFromDefaults(): void
@@ -88,6 +96,14 @@ class ReferentielJuridique extends Component
         $this->validate([
             'newTitle'      => 'required|string|min:3|max:255',
             'newPercentage' => 'required|numeric|min:0.01|max:100',
+            'newOrder'      => 'required|integer|min:1',
+        ], [
+            'newTitle.required'      => 'Le nom de la phase est obligatoire.',
+            'newTitle.min'           => 'Le nom doit contenir au moins 3 caractères.',
+            'newPercentage.required' => 'Le pourcentage est obligatoire.',
+            'newPercentage.min'      => 'Le pourcentage doit être supérieur à 0.',
+            'newOrder.required'      => 'Le numéro d\'ordre est obligatoire.',
+            'newOrder.min'           => 'Le numéro d\'ordre doit être au moins 1.',
         ]);
 
         $currentSum = $this->getCurrentSum();
@@ -96,18 +112,40 @@ class ReferentielJuridique extends Component
             return;
         }
 
-        $maxOrder = $this->project->legalSteps()->max('sort_order') ?? 0;
+        // ODS step (is_deletable = false) must always stay last
+        $odsStep = LegalStep::where('project_id', $this->project->id)
+            ->where('is_deletable', false)
+            ->first();
+
+        // Cap order: new step cannot have sort_order >= ODS step's sort_order
+        $effectiveOrder = $odsStep
+            ? min($this->newOrder, $odsStep->sort_order)
+            : $this->newOrder;
+
+        // Shift all non-ODS steps with sort_order >= effectiveOrder up by 1
+        LegalStep::where('project_id', $this->project->id)
+            ->where('sort_order', '>=', $effectiveOrder)
+            ->when($odsStep, fn($q) => $q->where('id', '!=', $odsStep->id))
+            ->increment('sort_order');
 
         LegalStep::create([
             'project_id'   => $this->project->id,
             'created_by'   => auth()->id(),
             'title'        => $this->newTitle,
             'percentage'   => $this->newPercentage,
-            'sort_order'   => $maxOrder + 1,
+            'sort_order'   => $effectiveOrder,
             'is_deletable' => true,
         ]);
 
-        $this->reset(['newTitle', 'newPercentage']);
+        // Ensure ODS step is still the very last
+        if ($odsStep) {
+            $maxNonOds = LegalStep::where('project_id', $this->project->id)
+                ->where('id', '!=', $odsStep->id)
+                ->max('sort_order') ?? 0;
+            $odsStep->update(['sort_order' => $maxNonOds + 1]);
+        }
+
+        $this->reset(['newTitle', 'newPercentage', 'newOrder']);
         session()->flash('success', 'Phase ajoutée.');
     }
 
@@ -132,6 +170,13 @@ class ReferentielJuridique extends Component
             'editTitle'      => 'required|string|min:3|max:255',
             'editPercentage' => 'required|numeric|min:0.01|max:100',
             'editOrder'      => 'required|integer|min:1',
+        ], [
+            'editTitle.required'      => 'Le nom de la phase est obligatoire.',
+            'editTitle.min'           => 'Le nom doit contenir au moins 3 caractères.',
+            'editPercentage.required' => 'Le pourcentage est obligatoire.',
+            'editPercentage.min'      => 'Le pourcentage doit être supérieur à 0.',
+            'editOrder.required'      => 'Le numéro d\'ordre est obligatoire.',
+            'editOrder.min'           => 'Le numéro d\'ordre doit être au moins 1.',
         ]);
 
         $step        = LegalStep::findOrFail($this->editingStepId);
@@ -211,12 +256,17 @@ class ReferentielJuridique extends Component
             return;
         }
 
-        $step->check(auth()->id());
-
-        // Si c'est la dernière phase (ODS Démarrage), ouvrir la modale
+        // Vérifier si c'est la dernière phase — PDF obligatoire avant cochage
         $isLast = !LegalStep::where('project_id', $this->project->id)
             ->where('sort_order', '>', $step->sort_order)
             ->exists();
+
+        if ($isLast && !$step->pdf_path) {
+            session()->flash('error', 'Vous devez uploader la fiche PDF avant de cocher cette phase (ODS de Démarrage).');
+            return;
+        }
+
+        $step->check(auth()->id());
 
         if ($isLast) {
             $this->odsDemarrageModalOpen = true;
@@ -251,12 +301,24 @@ class ReferentielJuridique extends Component
     // =========================================================================
     public function emitOdsArret(): void
     {
-        $this->validate(['odsArretNotes' => 'required|string|min:10']);
+        $this->validate([
+            'odsArretNotes' => 'required|string|min:10',
+            'odsArretPdf'   => 'required|file|mimes:pdf|max:10240',
+        ], [
+            'odsArretNotes.required' => 'La description de l\'incident est obligatoire.',
+            'odsArretNotes.min'      => 'La description doit contenir au moins 10 caractères.',
+            'odsArretPdf.required'   => 'La fiche d\'arrêt (PDF) est obligatoire.',
+            'odsArretPdf.mimes'      => 'Le fichier doit être au format PDF.',
+            'odsArretPdf.max'        => 'Le fichier ne doit pas dépasser 10 Mo.',
+        ]);
+
+        $pdfPath = $this->odsArretPdf->store('ods-records', 'public');
 
         $ods = $this->odsService->emitArret(
             $this->project,
             auth()->user(),
-            $this->odsArretNotes
+            $this->odsArretNotes,
+            $pdfPath
         );
 
         if (!$ods) {
@@ -267,6 +329,7 @@ class ReferentielJuridique extends Component
 
         $this->odsArretModalOpen = false;
         $this->odsArretNotes     = '';
+        $this->odsArretPdf       = null;
     }
 
     // =========================================================================
@@ -274,12 +337,24 @@ class ReferentielJuridique extends Component
     // =========================================================================
     public function emitOdsReprise(): void
     {
-        $this->validate(['odsRepriseNotes' => 'required|string|min:10']);
+        $this->validate([
+            'odsRepriseNotes' => 'required|string|min:10',
+            'odsReprisePdf'   => 'required|file|mimes:pdf|max:10240',
+        ], [
+            'odsRepriseNotes.required' => 'La description de la reprise est obligatoire.',
+            'odsRepriseNotes.min'      => 'La description doit contenir au moins 10 caractères.',
+            'odsReprisePdf.required'   => 'La fiche de reprise (PDF) est obligatoire.',
+            'odsReprisePdf.mimes'      => 'Le fichier doit être au format PDF.',
+            'odsReprisePdf.max'        => 'Le fichier ne doit pas dépasser 10 Mo.',
+        ]);
+
+        $pdfPath = $this->odsReprisePdf->store('ods-records', 'public');
 
         $ods = $this->odsService->emitReprise(
             $this->project,
             auth()->user(),
-            $this->odsRepriseNotes
+            $this->odsRepriseNotes,
+            $pdfPath
         );
 
         if (!$ods) {
@@ -290,6 +365,7 @@ class ReferentielJuridique extends Component
 
         $this->odsRepriseModalOpen = false;
         $this->odsRepriseNotes     = '';
+        $this->odsReprisePdf       = null;
     }
 
     // =========================================================================

@@ -6,26 +6,22 @@ use App\Models\Notification;
 use App\Models\Project;
 use App\Models\User;
 use App\Services\NotificationService;
+use Carbon\Carbon;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
-use Livewire\WithPagination;
 
 #[Layout('layouts.app')]
 class DashboardDirector extends Component
 {
-    use WithPagination;
-
     public $school;
 
-    // Modal affectation
-    public bool  $showAssignModal  = false;
-    public ?int  $projectIdAssign  = null;
-    public ?int  $selectedJuriste  = null;
-    public ?int  $selectedChef     = null;
+    public bool $showAssignModal = false;
+    public ?int $projectIdAssign = null;
+    public ?int $selectedJuriste = null;
+    public ?int $selectedChef    = null;
 
-    // Modal détail projet
-    public bool  $showDetailModal  = false;
-    public ?int  $detailProjectId  = null;
+    public bool $showDetailModal = false;
+    public ?int $detailProjectId = null;
 
     protected NotificationService $notificationService;
 
@@ -41,7 +37,7 @@ class DashboardDirector extends Component
     }
 
     // =========================================================================
-    // AFFECTATION DU PERSONNEL
+    // AFFECTATION
     // =========================================================================
     public function openAssignModal(int $projectId): void
     {
@@ -53,10 +49,10 @@ class DashboardDirector extends Component
 
     public function closeAssignModal(): void
     {
-        $this->showAssignModal  = false;
-        $this->projectIdAssign  = null;
-        $this->selectedJuriste  = null;
-        $this->selectedChef     = null;
+        $this->showAssignModal = false;
+        $this->projectIdAssign = null;
+        $this->selectedJuriste = null;
+        $this->selectedChef    = null;
     }
 
     public function assignPersonnel(): void
@@ -65,9 +61,9 @@ class DashboardDirector extends Component
             'selectedJuriste' => 'required|different:selectedChef',
             'selectedChef'    => 'required',
         ], [
-            'selectedJuriste.required' => 'Veuillez sélectionner un juriste.',
-            'selectedChef.required'    => 'Veuillez sélectionner un chef de projet.',
-            'selectedJuriste.different'=> 'Le juriste et le chef de projet doivent être des personnes différentes.',
+            'selectedJuriste.required'  => 'Veuillez sélectionner un juriste.',
+            'selectedJuriste.different' => 'Le juriste et le chef de projet doivent être différents.',
+            'selectedChef.required'     => 'Veuillez sélectionner un chef de projet.',
         ]);
 
         $project = Project::where('id', $this->projectIdAssign)
@@ -75,20 +71,19 @@ class DashboardDirector extends Component
             ->firstOrFail();
 
         $project->update([
-            'juriste_id'     => $this->selectedJuriste,
-            'chef_projet_id' => $this->selectedChef,
-            'status'         => 'En Etude',
+            'juriste_id'                => $this->selectedJuriste,
+            'chef_projet_id'            => $this->selectedChef,
+            'status'                    => 'En Etude',
             'school_director_viewed_at' => now(),
         ]);
 
         $this->notificationService->notifyAssignment($project->fresh());
-
         $this->closeAssignModal();
-        session()->flash('success', 'Personnel affecté avec succès. Le statut est maintenant « En Étude ».');
+        session()->flash('success', 'Personnel affecté. Statut passé en « En Étude ».');
     }
 
     // =========================================================================
-    // DÉTAIL PROJET (modale)
+    // DETAIL MODAL
     // =========================================================================
     public function openDetailModal(int $projectId): void
     {
@@ -117,58 +112,113 @@ class DashboardDirector extends Component
     // =========================================================================
     public function render()
     {
-        $projects = Project::where('school_id', $this->school->id)
-            ->with('nature', 'juriste', 'chefProjet', 'legalSteps', 'expenses')
-            ->orderByRaw("FIELD(status,'Nouveau','En Etude','En Cours','Termine')")
-            ->paginate(10);
+        $sid = $this->school->id;
 
-        // Juristes éligibles : < 2 projets actifs dans cette école
+        $stats = [
+            'total'    => Project::where('school_id', $sid)->count(),
+            'nouveau'  => Project::where('school_id', $sid)->where('status', 'Nouveau')->count(),
+            'en_etude' => Project::where('school_id', $sid)->where('status', 'En Etude')->count(),
+            'en_cours' => Project::where('school_id', $sid)->where('status', 'En Cours')->count(),
+            'termine'  => Project::where('school_id', $sid)->where('status', 'Termine')->count(),
+        ];
+
+        // New projects needing assignment
+        $newProjects = Project::where('school_id', $sid)
+            ->where('status', 'Nouveau')
+            ->with('nature')
+            ->latest()
+            ->get();
+
+        // ---- Gantt: 5-year calendar ----
+        $activeProjects = Project::where('school_id', $sid)
+            ->whereNotIn('status', ['Termine'])
+            ->get();
+
+        $monthOffset = fn(Carbon $d, Carbon $base) =>
+            ($d->year - $base->year) * 12 + ($d->month - $base->month);
+
+        if ($activeProjects->isEmpty()) {
+            $ganttStart = Carbon::create(now()->year, 1, 1);
+        } else {
+            $starts     = $activeProjects->map(fn($p) =>
+                ($p->started_at ?? $p->created_at)->copy()->startOfMonth()
+            );
+            $ganttStart = $starts->min()->startOfYear();
+        }
+
+        $numMonths = 60; // 5 years fixed
+
+        // Month labels with year info — fixed 3-letter abbreviations
+        $shortMonths = ['JAN','FÉV','MAR','AVR','MAI','JUN','JUL','AOÛ','SEP','OCT','NOV','DÉC'];
+        $ganttMonths = [];
+        $cursor = $ganttStart->copy();
+        for ($i = 0; $i < $numMonths; $i++) {
+            $ganttMonths[] = [
+                'label'     => $shortMonths[$cursor->month - 1],
+                'year'      => $cursor->year,
+                'isCurrent' => $cursor->isSameMonth(now()),
+            ];
+            $cursor->addMonth();
+        }
+
+        $yearGroups      = collect($ganttMonths)->groupBy('year')->map(fn($months) => $months->count());
+        $currentMonthIdx = max(0, $monthOffset(now()->startOfMonth(), $ganttStart));
+
+        // Project bars with integer month offsets
+        $ganttProjects = $activeProjects->map(function ($p) use ($ganttStart, $numMonths, $monthOffset) {
+            $start      = ($p->started_at ?? $p->created_at)->copy()->startOfMonth();
+            $leftMonths = max(0, $monthOffset($start, $ganttStart));
+            $widthMonths = max(1, $p->duration_months);
+
+            // Clip if starts after window
+            if ($leftMonths >= $numMonths) return null;
+            // Clip width if exceeds window
+            if ($leftMonths + $widthMonths > $numMonths) {
+                $widthMonths = $numMonths - $leftMonths;
+            }
+
+            return [
+                'title'       => $p->title,
+                'status'      => $p->status,
+                'leftMonths'  => $leftMonths,
+                'widthMonths' => $widthMonths,
+            ];
+        })->filter()->values();
+
+        // Modal data
         $juristes = User::where('role', 'juriste')
-            ->where('school_id', $this->school->id)
+            ->where('school_id', $sid)
             ->where('is_active', true)
             ->get()
-            ->filter(function ($u) {
-                $active = Project::where('juriste_id', $u->id)
-                    ->whereIn('status', ['En Etude', 'En Cours'])
-                    ->count();
-                return $active < 2;
-            });
+            ->filter(fn($u) => Project::where('juriste_id', $u->id)
+                ->whereIn('status', ['En Etude', 'En Cours'])->count() < 2);
 
-        // Chefs éligibles : 0 projet actif
         $chefs = User::where('role', 'chef_projet')
-            ->where('school_id', $this->school->id)
+            ->where('school_id', $sid)
             ->where('is_active', true)
             ->get()
-            ->filter(function ($u) {
-                $active = Project::where('chef_projet_id', $u->id)
-                    ->whereIn('status', ['En Etude', 'En Cours'])
-                    ->count();
-                return $active === 0;
-            });
+            ->filter(fn($u) => Project::where('chef_projet_id', $u->id)
+                ->whereIn('status', ['En Etude', 'En Cours'])->count() === 0);
 
-        // Projet en détail
         $detailProject = $this->detailProjectId
-            ? Project::with('legalSteps', 'expenses', 'odsRecords', 'juriste', 'chefProjet', 'nature', 'school')
+            ? Project::with('juriste', 'chefProjet', 'nature', 'school', 'creator')
                 ->find($this->detailProjectId)
             : null;
 
-        $stats = [
-            'total'    => Project::where('school_id', $this->school->id)->count(),
-            'nouveau'  => Project::where('school_id', $this->school->id)->where('status', 'Nouveau')->count(),
-            'en_etude' => Project::where('school_id', $this->school->id)->where('status', 'En Etude')->count(),
-            'en_cours' => Project::where('school_id', $this->school->id)->where('status', 'En Cours')->count(),
-            'termine'  => Project::where('school_id', $this->school->id)->where('status', 'Termine')->count(),
-        ];
-
         return view('livewire.director.dashboard-director', [
-            'projects'        => $projects,
-            'juristes'        => $juristes,
-            'chefs'           => $chefs,
-            'stats'           => $stats,
-            'detailProject'   => $detailProject,
-            'notifications'   => Notification::where('user_id', auth()->id())
-                ->orderBy('created_at', 'desc')->limit(15)->get(),
-            'unreadCount'     => Notification::where('user_id', auth()->id())
+            'stats'         => $stats,
+            'newProjects'   => $newProjects,
+            'ganttMonths'      => $ganttMonths,
+            'yearGroups'       => $yearGroups,
+            'ganttProjects'    => $ganttProjects,
+            'numMonths'        => $numMonths,
+            'currentMonthIdx'  => $currentMonthIdx,
+            'juristes'      => $juristes,
+            'chefs'         => $chefs,
+            'detailProject' => $detailProject,
+            'notifications' => Notification::where('user_id', auth()->id())
+                ->orderBy('created_at', 'desc')->limit(10)->get(),
+            'unreadCount'   => Notification::where('user_id', auth()->id())
                 ->where('is_read', false)->count(),
         ]);
     }

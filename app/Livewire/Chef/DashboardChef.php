@@ -3,6 +3,7 @@
 namespace App\Livewire\Chef;
 
 use App\Models\Expense;
+use App\Models\LegalStep;
 use App\Models\Notification;
 use App\Models\OdsRecord;
 use App\Models\Project;
@@ -23,6 +24,13 @@ class DashboardChef extends Component
 
     // Confirmation clôture
     public bool $confirmClose = false;
+
+    // Modal fiche ODS
+    public bool $odsModalOpen = false;
+    public ?int $odsModalId   = null;
+
+    // Modal fiche de projet
+    public bool $ficheModalOpen = false;
 
     protected NotificationService $notificationService;
 
@@ -62,6 +70,21 @@ class DashboardChef extends Component
     // =========================================================================
     public function addExpense(): void
     {
+        $project = $this->getSelectedProject();
+
+        if (!$project) {
+            session()->flash('error', 'Sélectionnez un projet.');
+            return;
+        }
+
+        // Check if last ODS is Arrêt (no Reprise after)
+        $lastOds = OdsRecord::where('project_id', $project->id)
+            ->orderBy('issued_at', 'desc')->first();
+        if ($lastOds && $lastOds->type === 'Arret') {
+            session()->flash('error', 'Ajout de dépense bloqué : un ODS d\'Arrêt est en cours. Attendez l\'ODS de Reprise.');
+            return;
+        }
+
         $this->validate([
             'expenseDescription' => 'required|string|min:3|max:255',
             'expenseAmount'      => 'required|numeric|min:1',
@@ -72,13 +95,6 @@ class DashboardChef extends Component
             'expenseAmount.min'           => 'Le montant doit être supérieur à 0.',
             'expenseDate.before_or_equal' => 'La date ne peut pas être dans le futur.',
         ]);
-
-        $project = $this->getSelectedProject();
-
-        if (!$project) {
-            session()->flash('error', 'Sélectionnez un projet.');
-            return;
-        }
 
         Expense::create([
             'project_id'  => $project->id,
@@ -121,6 +137,28 @@ class DashboardChef extends Component
         session()->flash('success', 'Projet clôturé et archivé avec succès.');
     }
 
+    public function openOdsModal(int $odsId): void
+    {
+        $this->odsModalId   = $odsId;
+        $this->odsModalOpen = true;
+    }
+
+    public function closeOdsModal(): void
+    {
+        $this->odsModalOpen = false;
+        $this->odsModalId   = null;
+    }
+
+    public function openFicheModal(): void
+    {
+        $this->ficheModalOpen = true;
+    }
+
+    public function closeFicheModal(): void
+    {
+        $this->ficheModalOpen = false;
+    }
+
     private function getSelectedProject(): ?Project
     {
         if (!$this->selectedProjectId) return null;
@@ -143,6 +181,8 @@ class DashboardChef extends Component
         $budgetPct      = 0;
         $odsHistory     = collect();
 
+        $expensesLocked = false;
+
         if ($selectedProject) {
             $expenses   = Expense::where('project_id', $selectedProject->id)
                 ->orderBy('expense_date', 'desc')->get();
@@ -152,16 +192,44 @@ class DashboardChef extends Component
                 : 0;
             $odsHistory = OdsRecord::where('project_id', $selectedProject->id)
                 ->with('issuedBy')->orderBy('issued_at', 'desc')->get();
+
+            // Lock expenses if last ODS is an Arrêt (no subsequent Reprise)
+            $lastOds = $odsHistory->first(); // already ordered by issued_at desc
+            $expensesLocked = $lastOds && $lastOds->type === 'Arret';
         }
 
         $notifications = Notification::where('user_id', auth()->id())
+            ->latest()
+            ->limit(8)
+            ->get();
+
+        $unreadCount = Notification::where('user_id', auth()->id())
             ->where('is_read', false)
-            ->where('type', 'LIKE', 'ods_%')
-            ->latest()->get();
+            ->count();
+
+        $odsModalRecord  = null;
+        $odsModalPdfPath = null;
+
+        if ($this->odsModalId) {
+            $odsModalRecord = OdsRecord::with('issuedBy')->find($this->odsModalId);
+
+            if ($odsModalRecord) {
+                $odsModalPdfPath = $odsModalRecord->pdf_path;
+
+                // For Démarrage ODS with no stored PDF, fall back to the last legal step's PDF
+                if (!$odsModalPdfPath && $odsModalRecord->type === 'Demarrage') {
+                    $lastStep = LegalStep::where('project_id', $odsModalRecord->project_id)
+                        ->orderBy('sort_order', 'desc')
+                        ->first();
+                    $odsModalPdfPath = $lastStep?->pdf_path;
+                }
+            }
+        }
 
         return view('livewire.chef.dashboard-chef', compact(
             'myProjects', 'selectedProject', 'expenses',
-            'totalSpent', 'budgetPct', 'odsHistory', 'notifications'
+            'totalSpent', 'budgetPct', 'odsHistory', 'notifications', 'unreadCount',
+            'odsModalRecord', 'odsModalPdfPath', 'expensesLocked'
         ));
     }
 }

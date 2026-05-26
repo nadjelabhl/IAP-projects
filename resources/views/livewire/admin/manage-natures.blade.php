@@ -1,97 +1,103 @@
-<div class="max-w-5xl mx-auto">
-    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        <div class="bg-slate-900 p-6 flex justify-between items-center">
-            <div>
-                <h2 class="text-xl font-bold text-white">Gestion des Natures de Projets</h2>
-                <p class="text-slate-400 text-xs mt-1 uppercase tracking-widest">Administration</p>
-            </div>
-            <button wire:click="openModal" class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded-xl transition">
-                + Nouvelle Nature
-            </button>
+<div class="p-8 space-y-6">
+
+    {{-- Flash --}}
+    @if(session('message'))
+        <div class="flex items-center gap-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl px-5 py-3.5 text-sm font-semibold">
+            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+            {{ session('message') }}
         </div>
+    @endif
 
-        <div class="p-6">
-            @if(session()->has('message'))
-                <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
-                    {{ session('message') }}
-                </div>
-            @endif
+    {{-- Header --}}
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-black text-slate-900 tracking-tight">Natures de projets</h1>
+            <p class="text-sm text-slate-400 mt-0.5">Paramètres généraux — types de projets</p>
+        </div>
+        <button wire:click="openModal"
+            class="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-bold px-5 py-2.5 rounded-xl shadow-sm shadow-orange-200 transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg>
+            Nouvelle nature
+        </button>
+    </div>
 
-            <table class="w-full">
-                <thead>
-                    <tr class="bg-slate-50 border-b border-slate-200">
-                        <th class="text-left p-4 font-bold text-slate-700">Nom</th>
-                        <th class="text-right p-4 font-bold text-slate-700">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach($natures as $nature)
-                        <tr class="border-b border-slate-100 hover:bg-slate-50">
-                            <td class="p-4 font-medium text-slate-800">{{ $nature->name }}</td>
-                            <td class="p-4 text-right space-x-4">
-                                <button wire:click="edit({{ $nature->id }})" class="text-blue-600 hover:text-blue-800 font-semibold text-sm">Modifier</button>
-                                <button wire:click="confirmDelete({{ $nature->id }})" class="text-red-600 hover:text-red-800 font-semibold text-sm">Supprimer</button>
-                            </td>
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
+    {{-- Table --}}
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        <table class="w-full">
+            <thead>
+                <tr class="bg-slate-50">
+                    <th class="text-left px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Nom</th>
+                    <th class="px-6 py-3"></th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-50">
+                @foreach($natures as $nature)
+                <tr class="hover:bg-slate-50/50 transition-colors">
+                    <td class="px-6 py-4 text-sm font-semibold text-slate-800">{{ $nature->name }}</td>
+                    <td class="px-6 py-4">
+                        <div class="flex items-center gap-2 justify-end">
+                            <button wire:click="edit({{ $nature->id }})"
+                                class="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a4 4 0 01-2.829 1.172H7v-2a4 4 0 011.172-2.828z"/></svg>
+                            </button>
+                            <button wire:click="confirmDelete({{ $nature->id }})"
+                                class="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                @endforeach
+            </tbody>
+        </table>
+        @if($natures->hasPages())
+        <div class="px-6 py-4 border-t border-slate-100">{{ $natures->links() }}</div>
+        @endif
+    </div>
 
-            <div class="mt-4">
-                {{ $natures->links() }}
+    {{-- Modal Create/Edit --}}
+    @if($isModalOpen)
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" wire:click="closeModal"></div>
+        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div class="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
+                <h3 class="text-base font-black text-slate-900">{{ $nature_id ? 'Modifier' : 'Nouvelle' }} nature</h3>
+                <button wire:click="closeModal" class="p-2 rounded-xl text-slate-400 hover:bg-slate-100">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <div class="px-6 py-5">
+                <label class="block text-xs font-bold text-slate-600 mb-1.5">Nom <span class="text-red-400">*</span></label>
+                <input type="text" wire:model="name" placeholder="Ex : Constructions / Infrastructures"
+                    class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400">
+                @error('name') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
+            </div>
+            <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+                <button wire:click="closeModal" class="px-5 py-2.5 rounded-xl text-sm font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-100">Annuler</button>
+                <button wire:click="{{ $nature_id ? 'update' : 'create' }}" class="px-5 py-2.5 rounded-xl text-sm font-bold text-white bg-orange-500 hover:bg-orange-600">Enregistrer</button>
             </div>
         </div>
     </div>
-
-    <!-- Modal Create/Edit -->
-    @if($isModalOpen)
-        <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div class="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
-                <h3 class="text-lg font-bold mb-4 text-slate-800">
-                    {{ $nature_id ? 'Modifier' : 'Nouvelle' }} Nature de Projet
-                </h3>
-                <form wire:submit.prevent="{{ $nature_id ? 'update' : 'create' }}">
-                    <div class="mb-4">
-                        <label class="block text-sm font-bold text-slate-700 mb-2">Nom</label>
-                        <input type="text" wire:model="name"
-                            class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:outline-none focus:border-blue-500"
-                            placeholder="Ex: Constructions / Infrastructures">
-                        @error('name')
-                            <span class="text-red-500 text-xs mt-1">{{ $message }}</span>
-                        @enderror
-                    </div>
-                    <div class="flex justify-end space-x-3">
-                        <button type="button" wire:click="closeModal"
-                            class="px-4 py-2 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50">
-                            Annuler
-                        </button>
-                        <button type="submit"
-                            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold">
-                            Enregistrer
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
     @endif
 
-    <!-- Modal Delete -->
+    {{-- Modal Delete --}}
     @if($deleteModalOpen)
-        <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-[4/18/2026 1:58 AM] Nadjela: <div class="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
-                <h3 class="text-lg font-bold mb-2 text-slate-800">Confirmer la suppression</h3>
-                <p class="mb-6 text-slate-600">Êtes-vous sûr de vouloir supprimer <strong>"{{ $natureToDelete?->name }}"</strong> ?</p>
-                <div class="flex justify-end space-x-3">
-                    <button type="button" wire:click="$set('deleteModalOpen', false)"
-                        class="px-4 py-2 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50">
-                        Annuler
-                    </button>
-                    <button type="button" wire:click="delete"
-                        class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold">
-                        Supprimer
-                    </button>
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" wire:click="$set('deleteModalOpen', false)"></div>
+        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+            <div class="p-6 text-center">
+                <div class="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-7 h-7 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
                 </div>
+                <h3 class="text-base font-black text-slate-900 mb-1">Supprimer la nature</h3>
+                <p class="text-sm text-slate-500">Confirmez-vous la suppression de <strong class="text-slate-700">{{ $natureToDelete?->name }}</strong> ?</p>
+            </div>
+            <div class="px-6 pb-6 flex gap-3">
+                <button wire:click="$set('deleteModalOpen', false)" class="flex-1 px-4 py-2.5 rounded-xl text-sm font-bold text-slate-600 bg-slate-100 hover:bg-slate-200">Annuler</button>
+                <button wire:click="delete" class="flex-1 px-4 py-2.5 rounded-xl text-sm font-bold text-white bg-red-500 hover:bg-red-600">Supprimer</button>
             </div>
         </div>
+    </div>
     @endif
+
 </div>

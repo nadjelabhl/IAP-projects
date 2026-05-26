@@ -16,11 +16,23 @@ class DashboardDg extends Component
 {
     use WithPagination;
 
+    public ?int $ficheProjectId = null;
+
     protected NotificationService $notificationService;
 
     public function boot(NotificationService $notificationService): void
     {
         $this->notificationService = $notificationService;
+    }
+
+    public function openFiche(int $id): void
+    {
+        $this->ficheProjectId = $id;
+    }
+
+    public function closeFiche(): void
+    {
+        $this->ficheProjectId = null;
     }
 
     /**
@@ -56,52 +68,38 @@ class DashboardDg extends Component
             'budget_total'   => Project::sum('budget'),
         ];
 
-        // Données pour le Gantt (projets actifs avec started_at)
-        $ganttProjects = Project::whereIn('status', ['En Cours', 'En Etude'])
-            ->with('school')
+        // Projets par école avec SplitCircle — tout chargé en une seule passe
+        $allProjects = Project::whereNotIn('status', ['Termine'])
+            ->with('school', 'nature', 'legalSteps', 'expenses')
             ->get()
             ->map(function ($p) {
-                $start = $p->started_at ?? $p->created_at;
-                $end   = (clone $start)->addMonths($p->duration_months);
-                return [
-                    'id'      => $p->id,
-                    'title'   => $p->title,
-                    'school'  => $p->school->name,
-                    'status'  => $p->status,
-                    'start'   => $start->format('Y-m-d'),
-                    'end'     => $end->format('Y-m-d'),
-                    'overdue' => $end->isPast(),
-                ];
-            });
+                $legalPct   = (float) $p->legalSteps->where('is_completed', true)->sum('percentage');
+                $totalSpent = (float) $p->expenses->sum('amount');
+                $budgetPct  = $p->budget > 0
+                    ? min(($totalSpent / $p->budget) * 100, 100)
+                    : 0;
 
-        // Projets par école avec SplitCircle
-        $schools = School::all()->map(function ($school) {
-            $projects = Project::where('school_id', $school->id)
-                ->whereNotIn('status', ['Termine'])
-                ->with('legalSteps', 'expenses')
-                ->get()
-                ->map(function ($p) {
-                    $legalPct  = (float) $p->legalSteps()
-                        ->where('is_completed', true)->sum('percentage');
-                    $totalSpent = (float) $p->expenses()->sum('amount');
-                    $budgetPct  = $p->budget > 0
-                        ? min(($totalSpent / $p->budget) * 100, 100)
-                        : 0;
+                return array_merge($p->toArray(), [
+                    'legal_progress'     => $legalPct,
+                    'budget_consumption' => $budgetPct,
+                    'total_spent'        => $totalSpent,
+                ]);
+            })
+            ->groupBy('school_id');
 
-                    return array_merge($p->toArray(), [
-                        'legal_progress'    => $legalPct,
-                        'budget_consumption'=> $budgetPct,
-                        'total_spent'       => $totalSpent,
-                    ]);
-                });
+        $schools = School::all()->map(fn ($school) => [
+            'school'   => $school,
+            'projects' => $allProjects->get($school->id, collect()),
+        ]);
 
-            return ['school' => $school, 'projects' => $projects];
-        });
+        $ficheProject = $this->ficheProjectId
+            ? Project::with('nature', 'school', 'creator')->find($this->ficheProjectId)
+            : null;
 
         return view('livewire.dg.dashboard-dg', [
             'stats'         => $stats,
-            'ganttProjects' => $ganttProjects,
             'schoolsData'   => $schools,
+            'ficheProject'  => $ficheProject,
             'notifications' => Notification::where('user_id', auth()->id())
                 ->orderBy('created_at', 'desc')->limit(15)->get(),
             'unreadCount'   => Notification::where('user_id', auth()->id())

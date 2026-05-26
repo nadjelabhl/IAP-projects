@@ -29,7 +29,7 @@
             <div class="flex justify-between items-center mb-2">
                 <span class="text-sm font-bold text-slate-600">Consommation Budget</span>
                 <span class="text-sm font-bold {{ $budgetSummary['is_over_budget'] ? 'text-red-600' : 'text-iap-orange' }}">
-                    {{ number_format($budgetSummary['consumption_percent'], 1) }}%
+                    {{ number_format($budgetSummary['consumption_percent'], 0) }}%
                 </span>
             </div>
             <div class="w-full bg-slate-200 rounded-full h-3">

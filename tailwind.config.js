@@ -17,7 +17,7 @@ export default {
                 'iap-bg': '#f7f9fb',
             },
             fontFamily: {
-                sans: ['Poppins', 'Inter', ...defaultTheme.fontFamily.sans],
+                sans: ['Plus Jakarta Sans', 'Poppins', 'Inter', ...defaultTheme.fontFamily.sans],
             },
             borderRadius: {
                 '2xl': '32px', // Arrondis prononcés selon les spécifications

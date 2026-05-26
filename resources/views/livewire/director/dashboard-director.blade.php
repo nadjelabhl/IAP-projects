@@ -1,372 +1,427 @@
-<div class="max-w-7xl mx-auto space-y-6">
+<div class="p-8 space-y-6">
 
-    {{-- Alertes flash --}}
+    {{-- Flash --}}
     @if(session('success'))
-        <div class="bg-green-50 border border-green-200 rounded-xl p-4 text-green-800 text-sm font-semibold">{{ session('success') }}</div>
+    <div class="flex items-center gap-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl px-5 py-3.5 text-sm font-semibold">
+        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+        {{ session('success') }}
+    </div>
     @endif
 
-    {{-- En-tête école --}}
-    <div class="bg-slate-800 rounded-2xl px-6 py-5 flex items-center justify-between">
+    {{-- Header --}}
+    <div class="flex items-start justify-between">
         <div>
-            <p class="text-slate-400 text-xs uppercase font-bold">Tableau de bord</p>
-            <h1 class="text-2xl font-black text-white mt-0.5">École {{ $school->name }}</h1>
+            <p class="text-sm text-slate-400">{{ now()->locale('fr')->translatedFormat('l d F Y') }}</p>
+            <h1 class="text-4xl font-black text-slate-900 tracking-tight mt-1">Bienvenue, {{ auth()->user()->name }}</h1>
         </div>
-        @if($unreadCount > 0)
-            <span class="bg-red-500 text-white text-sm font-bold px-3 py-1 rounded-full">
-                {{ $unreadCount }} alerte(s) non lue(s)
-            </span>
-        @endif
+        {{-- Bell icon top-right → notifications --}}
+        <a href="{{ route('notifications.index') }}" class="relative shrink-0 mt-1 w-11 h-11 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-center text-slate-500 hover:text-orange-500 hover:border-orange-200 transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+            </svg>
+            @if($unreadCount > 0)
+            <span class="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-orange-500 text-white text-[10px] font-black flex items-center justify-center">{{ min($unreadCount, 9) }}</span>
+            @endif
+        </a>
     </div>
 
-    {{-- Statistiques --}}
-    <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+    {{-- Stats --}}
+    <div class="grid grid-cols-5 gap-4">
         @foreach([
-            ['Total', $stats['total'], 'border-slate-300'],
-            ['Nouveaux', $stats['nouveau'], 'border-yellow-400'],
-            ['En Étude', $stats['en_etude'], 'border-orange-400'],
-            ['En Cours', $stats['en_cours'], 'border-blue-400'],
-            ['Terminés', $stats['termine'], 'border-green-400'],
-        ] as [$label, $value, $color])
-            <div class="bg-white rounded-2xl shadow p-4 border-l-4 {{ $color }}">
-                <div class="text-xs text-slate-500 uppercase font-semibold">{{ $label }}</div>
-                <div class="text-3xl font-black text-slate-800 mt-1">{{ $value }}</div>
-            </div>
+            ['TOTAL PROJETS', $stats['total'],    'slate'],
+            ['NOUVEAU',       $stats['nouveau'],  'amber'],
+            ['EN ETUDE',      $stats['en_etude'], 'orange'],
+            ['EN COURS',      $stats['en_cours'], 'blue'],
+            ['TERMINÉ',       $stats['termine'],  'green'],
+        ] as [$label, $value, $tone])
+        @php
+            $toneMap = [
+                'slate'  => ['text-slate-900',   'border-slate-200'],
+                'amber'  => ['text-amber-500',   'border-amber-200'],
+                'orange' => ['text-orange-500',  'border-orange-200'],
+                'blue'   => ['text-blue-500',    'border-blue-200'],
+                'green'  => ['text-emerald-500', 'border-emerald-200'],
+            ];
+            [$textColor, $border] = $toneMap[$tone];
+        @endphp
+        <div class="bg-white rounded-2xl border {{ $border }} p-5 shadow-sm">
+            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">{{ $label }}</p>
+            <p class="text-5xl font-black {{ $textColor }} tabular-nums leading-none">{{ $value }}</p>
+        </div>
         @endforeach
     </div>
 
-    {{-- ====================================================================
-         PROJETS (layout gauche/droite par projet)
-    ===================================================================== --}}
-    <div class="bg-white rounded-2xl shadow overflow-hidden">
-        <div class="px-6 py-4 border-b border-slate-100">
-            <h2 class="font-bold text-slate-800">Projets de l'école</h2>
+    {{-- Notifications (under stats) --}}
+    @if($notifications->isNotEmpty())
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+                <svg class="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                </svg>
+                <h2 class="text-sm font-black text-slate-900">Notifications</h2>
+                @if($unreadCount > 0)
+                <span class="text-[11px] font-bold bg-orange-100 text-orange-600 px-2.5 py-0.5 rounded-full">{{ $unreadCount }} non lu{{ $unreadCount > 1 ? 'es' : '' }}</span>
+                @endif
+            </div>
         </div>
-
-        @forelse($projects as $project)
-            @php
-                $legalPct   = (float) $project->legalSteps->where('is_completed', true)->sum('percentage');
-                $totalSpent = (float) $project->expenses->sum('amount');
-                $budgetPct  = $project->budget > 0 ? min(($totalSpent / $project->budget) * 100, 100) : 0;
-            @endphp
-            <div class="px-6 py-5 border-b border-slate-50 last:border-0">
-                <div class="flex items-start gap-6">
-
-                    {{-- Gauche : infos + jauges --}}
-                    <div class="flex-1 min-w-0">
-                        <div class="flex items-start justify-between gap-2">
-                            <div class="min-w-0">
-                                <p class="font-bold text-slate-900 truncate">{{ $project->title }}</p>
-                                <p class="text-xs text-slate-500 mt-0.5">
-                                    {{ $project->nature->name ?? '—' }} &bull; {{ $project->type }}
-                                    &bull; Budget : {{ number_format($project->budget, 0, ',', ' ') }} DA
-                                </p>
-                                @if($project->juriste)
-                                    <p class="text-xs text-slate-400 mt-1">
-                                        Juriste : <span class="font-semibold text-slate-600">{{ $project->juriste->name }}</span>
-                                        @if($project->chefProjet)
-                                            &bull; Chef : <span class="font-semibold text-slate-600">{{ $project->chefProjet->name }}</span>
-                                        @endif
-                                    </p>
-                                @endif
-                            </div>
-                            <span class="flex-shrink-0 px-2 py-1 rounded-full text-xs font-bold
-                                @if($project->status === 'Nouveau') bg-yellow-100 text-yellow-700
-                                @elseif($project->status === 'En Etude') bg-orange-100 text-orange-700
-                                @elseif($project->status === 'En Cours') bg-blue-100 text-blue-700
-                                @else bg-green-100 text-green-700 @endif">
-                                {{ $project->status }}
-                            </span>
-                        </div>
-
-                        {{-- Jauges --}}
-                        <div class="mt-3 space-y-2">
-                            <div>
-                                <div class="flex justify-between text-xs text-slate-500 mb-1">
-                                    <span>Avancement juridique</span>
-                                    <span class="font-bold text-teal-600">{{ number_format($legalPct, 1) }} %</span>
-                                </div>
-                                <div class="w-full bg-slate-200 rounded-full h-2">
-                                    <div class="h-2 rounded-full bg-teal-400" style="width:{{ min($legalPct, 100) }}%"></div>
-                                </div>
-                            </div>
-                            <div>
-                                <div class="flex justify-between text-xs text-slate-500 mb-1">
-                                    <span>Consommation budgétaire</span>
-                                    <span class="font-bold @if($budgetPct >= 80) text-red-600 @else text-slate-600 @endif">
-                                        {{ number_format($budgetPct, 1) }} %
-                                    </span>
-                                </div>
-                                <div class="w-full bg-slate-200 rounded-full h-2">
-                                    <div class="h-2 rounded-full @if($budgetPct >= 80) bg-red-500 @elseif($budgetPct >= 60) bg-amber-500 @else bg-blue-400 @endif"
-                                        style="width:{{ min($budgetPct, 100) }}%"></div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="mt-3 flex gap-2">
-                            @if($project->status === 'Nouveau' && !$project->juriste_id)
-                                <button wire:click="openAssignModal({{ $project->id }})"
-                                    class="bg-iap-orange text-white font-bold text-xs px-4 py-1.5 rounded-xl hover:bg-orange-600 transition">
-                                    Affecter le personnel
-                                </button>
-                            @endif
-                            <button wire:click="openDetailModal({{ $project->id }})"
-                                class="text-xs text-slate-500 hover:text-iap-orange font-semibold underline transition">
-                                Voir détails
-                            </button>
-                        </div>
-                    </div>
-
-                    {{-- Droite : SplitCircle --}}
-                    <div class="flex-shrink-0 flex flex-col items-center gap-1 text-center">
-                        <x-project-split-circle :legalPct="$legalPct" :budgetPct="$budgetPct" :size="80"/>
-                        <p class="text-xs text-teal-600 font-bold leading-none">Juridique</p>
-                        <p class="text-xs text-red-400 font-bold leading-none">Budget</p>
-                    </div>
+        <div class="divide-y divide-slate-50 max-h-64 overflow-y-auto">
+            @foreach($notifications as $notif)
+            <div class="px-6 py-3 flex items-start gap-3 {{ $notif->is_read ? 'opacity-60' : '' }}"
+                 wire:click="markNotificationRead({{ $notif->id }})">
+                <div class="mt-0.5 w-2 h-2 rounded-full shrink-0 {{ $notif->is_read ? 'bg-slate-200' : 'bg-orange-400' }}"></div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-xs font-semibold text-slate-800 leading-snug">{{ $notif->message }}</p>
+                    <p class="text-[11px] text-slate-400 mt-0.5">{{ $notif->created_at->diffForHumans() }}</p>
                 </div>
             </div>
-        @empty
-            <div class="px-6 py-12 text-center text-slate-400">Aucun projet pour cette école.</div>
-        @endforelse
+            @endforeach
+        </div>
+    </div>
+    @endif
 
-        @if($projects->hasPages())
-            <div class="px-6 py-4 border-t border-slate-100">{{ $projects->links() }}</div>
-        @endif
+    {{-- Calendrier des Projets (Gantt) --}}
+    @php $colW = 52; $totalW = $numMonths * $colW; @endphp
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden"
+         x-data="{
+             drag: false, startX: 0, startScroll: 0,
+             init() {
+                 this.$nextTick(() => {
+                     const idx    = {{ $currentMonthIdx }};
+                     const colW   = {{ $colW }};
+                     const offset = idx * colW - this.$refs.track.clientWidth / 3;
+                     this.$refs.track.scrollLeft = Math.max(0, offset);
+                 });
+             },
+             beginDrag(e) {
+                 const cx = e.touches ? e.touches[0].clientX : e.clientX;
+                 this.drag = true; this.startX = cx;
+                 this.startScroll = this.$refs.track.scrollLeft;
+                 this.$refs.track.style.cursor = 'grabbing';
+             },
+             moveDrag(e) {
+                 if (!this.drag) return; e.preventDefault();
+                 const cx = e.touches ? e.touches[0].clientX : e.clientX;
+                 this.$refs.track.scrollLeft = this.startScroll - (cx - this.startX);
+             },
+             endDrag() { this.drag = false; this.$refs.track.style.cursor = 'grab'; },
+             onWheel(e) {
+                 e.preventDefault();
+                 this.$refs.track.scrollLeft += e.deltaX !== 0 ? e.deltaX : e.deltaY;
+             },
+             nudge(dir) { this.$refs.track.scrollBy({ left: dir * {{ $colW * 3 }}, behavior: 'smooth' }); }
+         }">
+
+        {{-- Header --}}
+        <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+            <h2 class="text-base font-black text-slate-900">Calendrier des Projets</h2>
+            <div class="flex items-center gap-3">
+                <div class="flex items-center gap-3 text-[10px] font-bold text-slate-400 mr-3">
+                    <span class="flex items-center gap-1.5"><span class="inline-block w-3 h-2.5 rounded" style="background:#f59e0b"></span>Nouveau</span>
+                    <span class="flex items-center gap-1.5"><span class="inline-block w-3 h-2.5 rounded" style="background:#f97316"></span>En Étude</span>
+                    <span class="flex items-center gap-1.5"><span class="inline-block w-3 h-2.5 rounded" style="background:#3b82f6"></span>En Cours</span>
+                </div>
+                {{-- Arrow buttons --}}
+                <button @click="nudge(-1)"
+                    class="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+                    </svg>
+                </button>
+                <button @click="nudge(1)"
+                    class="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        {{-- Scrollable track --}}
+        <div x-ref="track"
+             @mousedown="beginDrag($event)"
+             @mousemove="moveDrag($event)"
+             @mouseup="endDrag()"
+             @mouseleave="endDrag()"
+             @wheel.prevent="onWheel($event)"
+             @touchstart.passive="beginDrag($event)"
+             @touchmove.prevent="moveDrag($event)"
+             @touchend="endDrag()"
+             class="overflow-x-auto select-none"
+             style="cursor:grab; scrollbar-width:thin;">
+            <div style="width:{{ $totalW }}px;">
+
+                {{-- ① Year header --}}
+                <div class="flex bg-slate-800">
+                    @foreach($yearGroups as $year => $count)
+                    <div class="text-center text-xs font-black text-white py-2.5 border-r border-slate-700 last:border-r-0"
+                         style="width:{{ $count * $colW }}px; min-width:{{ $count * $colW }}px;">
+                        {{ $year }}
+                    </div>
+                    @endforeach
+                </div>
+
+                {{-- ② Month labels --}}
+                <div class="flex border-b border-slate-200 bg-slate-50">
+                    @foreach($ganttMonths as $m)
+                    <div class="shrink-0 text-center border-r border-slate-100 last:border-r-0 py-1.5"
+                         style="width:{{ $colW }}px; min-width:{{ $colW }}px; max-width:{{ $colW }}px; overflow:hidden;">
+                        <span class="text-[10px] font-black {{ $m['isCurrent'] ? 'text-orange-500' : 'text-slate-400' }}">
+                            {{ $m['label'] }}
+                        </span>
+                    </div>
+                    @endforeach
+                </div>
+
+                {{-- ③ Project bars --}}
+                <div class="relative" style="min-height:{{ max(64, count($ganttProjects) * 44 + 16) }}px;">
+
+                    {{-- Grid columns --}}
+                    <div class="absolute inset-0 flex pointer-events-none">
+                        @foreach($ganttMonths as $i => $m)
+                        <div class="shrink-0 border-r border-slate-100 h-full {{ $m['isCurrent'] ? 'bg-orange-50/40' : ($i % 2 !== 0 ? 'bg-slate-50/30' : '') }}"
+                             style="width:{{ $colW }}px; min-width:{{ $colW }}px;"></div>
+                        @endforeach
+                    </div>
+
+                    {{-- Bars --}}
+                    @forelse($ganttProjects as $idx => $gp)
+                    @php
+                        $barBg = match($gp['status']) {
+                            'Nouveau'  => '#f59e0b',
+                            'En Etude' => '#f97316',
+                            'En Cours' => '#3b82f6',
+                            default    => '#6b7280',
+                        };
+                        $top  = 8 + $idx * 44;
+                        $left = $gp['leftMonths'] * $colW + 2;
+                        $w    = max(1, $gp['widthMonths']) * $colW - 4;
+                    @endphp
+                    <div class="absolute flex items-center rounded-xl px-3 shadow-sm"
+                         style="top:{{ $top }}px; left:{{ $left }}px; width:{{ $w }}px; height:36px; background-color:{{ $barBg }};">
+                        <span class="text-[11px] font-bold text-white truncate">{{ $gp['title'] }}</span>
+                    </div>
+                    @empty
+                    <div class="flex items-center justify-center" style="height:64px;">
+                        <p class="text-sm text-slate-400 font-semibold">Aucun projet actif.</p>
+                    </div>
+                    @endforelse
+                </div>
+
+            </div>
+        </div>
     </div>
 
-    {{-- ====================================================================
-         NOTIFICATIONS
-    ===================================================================== --}}
-    <div class="bg-white rounded-2xl shadow overflow-hidden">
+    {{-- Nouveaux Projets --}}
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
         <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-            <h3 class="font-bold text-slate-800">Notifications</h3>
-            @if($unreadCount > 0)
-                <span class="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full font-bold">{{ $unreadCount }}</span>
+            <h2 class="text-base font-black text-slate-900">Nouveaux projets</h2>
+            @if($stats['nouveau'] > 0)
+            <span class="text-xs font-bold bg-amber-100 text-amber-700 px-3 py-1 rounded-full">{{ $stats['nouveau'] }} à traiter</span>
             @endif
         </div>
-        <div class="divide-y divide-slate-50 max-h-72 overflow-y-auto">
-            @forelse($notifications as $n)
-                <div class="flex items-start gap-3 px-6 py-3 {{ $n->is_read ? '' : 'bg-blue-50' }}">
-                    <span class="flex-shrink-0 w-2 h-2 rounded-full mt-2 {{ $n->priority === 'urgent' ? 'bg-red-500' : 'bg-slate-300' }}"></span>
-                    <div class="flex-1 min-w-0">
-                        <p class="text-sm text-slate-700">{{ $n->message }}</p>
-                        <p class="text-xs text-slate-400 mt-0.5">{{ $n->created_at->diffForHumans() }}</p>
-                    </div>
-                    @if(!$n->is_read)
-                        <button wire:click="markNotificationRead({{ $n->id }})"
-                            class="flex-shrink-0 text-xs text-iap-orange font-semibold hover:text-orange-600">Lire</button>
-                    @endif
-                </div>
-            @empty
-                <div class="px-6 py-8 text-center text-slate-400 text-sm">Aucune notification.</div>
-            @endforelse
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="border-b border-slate-100">
+                        <th class="text-left px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">PROJET</th>
+                        <th class="text-left px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">NATURE</th>
+                        <th class="text-left px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">BUDGET</th>
+                        <th class="text-left px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">STATUT</th>
+                        <th class="text-left px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">FICHE</th>
+                        <th class="text-left px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">AFFECTATION</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-50">
+                    @forelse($newProjects as $project)
+                    <tr class="hover:bg-slate-50/50 transition-colors">
+                        <td class="px-5 py-4">
+                            <p class="font-bold text-slate-900 text-sm">{{ $project->title }}</p>
+                            <p class="text-xs text-slate-500 mt-0.5">{{ $project->type }} · durée {{ $project->duration_months }} mois</p>
+                        </td>
+                        <td class="px-5 py-4 text-sm text-slate-600 whitespace-nowrap">
+                            {{ $project->nature->name ?? '—' }}
+                        </td>
+                        <td class="px-5 py-4 text-sm font-bold text-slate-800 tabular-nums whitespace-nowrap">
+                            {{ number_format($project->budget, 0, ',', ' ') }} KDA
+                        </td>
+                        <td class="px-5 py-4">
+                            <x-status-badge :status="$project->status"/>
+                        </td>
+                        <td class="px-5 py-4">
+                            <button wire:click="openDetailModal({{ $project->id }})"
+                                class="inline-flex items-center gap-1.5 text-sm text-slate-600 hover:text-orange-500 font-semibold transition-colors whitespace-nowrap">
+                                <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                </svg>
+                                Fiche projet
+                            </button>
+                        </td>
+                        <td class="px-5 py-4">
+                            <button wire:click="openAssignModal({{ $project->id }})"
+                                class="inline-flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-bold px-4 py-2 rounded-xl transition-colors whitespace-nowrap shadow-sm shadow-orange-200">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+                                    <path stroke-linecap="round" d="M12 5v14M5 12h14"/>
+                                </svg>
+                                Affecter le personnel
+                            </button>
+                        </td>
+                    </tr>
+                    @empty
+                    <tr>
+                        <td colspan="6" class="px-6 py-14 text-center">
+                            <svg class="w-10 h-10 mx-auto mb-3 text-slate-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <p class="text-sm font-semibold text-slate-400">Aucun nouveau projet à traiter</p>
+                        </td>
+                    </tr>
+                    @endforelse
+                </tbody>
+            </table>
         </div>
     </div>
 
-    {{-- ====================================================================
-         MODALE AFFECTATION PERSONNEL
-    ===================================================================== --}}
+    {{-- ===================== MODAL AFFECTATION ===================== --}}
     @if($showAssignModal)
-        @php $proj = $projects->firstWhere('id', $projectIdAssign); @endphp
-        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 mx-4">
-                <h3 class="font-bold text-slate-800 text-lg mb-1">Affecter le personnel</h3>
-                @if($proj)
-                    <p class="text-sm text-slate-500 mb-5">Projet : <strong>{{ $proj->title }}</strong></p>
+    <div class="fixed inset-0 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm"
+         style="z-index:99999;"
+         wire:click.self="closeAssignModal">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+            <div class="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
+                <h3 class="text-base font-black text-slate-900">Affecter le personnel</h3>
+                <button wire:click="closeAssignModal" class="p-2 rounded-xl text-slate-400 hover:bg-slate-100">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <div class="px-6 py-5 space-y-4">
+                <div>
+                    <label class="text-xs font-bold text-slate-600 mb-1.5 block">Juriste <span class="text-red-400">*</span></label>
+                    <select wire:model="selectedJuriste" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400">
+                        <option value="">— Sélectionner un juriste —</option>
+                        @foreach($juristes as $j)
+                        <option value="{{ $j->id }}">{{ $j->name }}</option>
+                        @endforeach
+                    </select>
+                    @if($juristes->isEmpty())<p class="text-amber-600 text-xs mt-1 font-semibold">Aucun juriste disponible.</p>@endif
+                    @error('selectedJuriste') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-slate-600 mb-1.5 block">Chef de Projet <span class="text-red-400">*</span></label>
+                    <select wire:model="selectedChef" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400">
+                        <option value="">— Sélectionner un chef de projet —</option>
+                        @foreach($chefs as $c)
+                        @if((string)$c->id !== (string)$selectedJuriste)
+                        <option value="{{ $c->id }}">{{ $c->name }}</option>
+                        @endif
+                        @endforeach
+                    </select>
+                    @if($chefs->isEmpty())<p class="text-amber-600 text-xs mt-1 font-semibold">Aucun chef disponible.</p>@endif
+                    @error('selectedChef') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                </div>
+            </div>
+            <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+                <button wire:click="closeAssignModal" class="px-5 py-2.5 rounded-xl text-sm font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-100">Annuler</button>
+                <button wire:click="assignPersonnel" class="px-5 py-2.5 rounded-xl text-sm font-bold text-white bg-orange-500 hover:bg-orange-600 shadow-sm shadow-orange-200">Confirmer l'affectation</button>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    {{-- ===================== MODAL FICHE PROJET ===================== --}}
+    @if($showDetailModal && $detailProject)
+    @php $dp = $detailProject; @endphp
+    <div class="fixed inset-0 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm"
+         style="z-index:99999;"
+         wire:click.self="closeDetailModal">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+
+            {{-- Header --}}
+            <div class="sticky top-0 bg-white px-6 py-5 border-b border-slate-100 flex items-start justify-between z-10">
+                <div>
+                    <p class="text-[10px] font-bold text-orange-500 uppercase tracking-widest mb-0.5">Fiche de projet</p>
+                    <h3 class="font-black text-slate-900 text-base leading-tight">{{ $dp->title }}</h3>
+                </div>
+                <button wire:click="closeDetailModal" class="p-2 rounded-xl text-slate-400 hover:bg-slate-100 shrink-0">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+
+            {{-- Body --}}
+            <div class="p-6 space-y-5">
+
+                {{-- Identité --}}
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-slate-50 rounded-xl p-4">
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">École</p>
+                        <p class="text-sm font-bold text-slate-900">{{ $dp->school->name ?? '—' }}</p>
+                    </div>
+                    <div class="bg-slate-50 rounded-xl p-4">
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Nature</p>
+                        <p class="text-sm font-bold text-slate-900">{{ $dp->nature->name ?? '—' }}</p>
+                    </div>
+                    <div class="bg-slate-50 rounded-xl p-4">
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Type</p>
+                        <p class="text-sm font-bold text-slate-900">{{ $dp->type }}</p>
+                    </div>
+                    <div class="bg-slate-50 rounded-xl p-4">
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Statut</p>
+                        <x-status-badge :status="$dp->status"/>
+                    </div>
+                </div>
+
+                {{-- Finances & calendrier --}}
+                <div class="grid grid-cols-3 gap-4">
+                    <div class="bg-slate-50 rounded-xl p-4">
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Budget</p>
+                        <p class="text-sm font-black text-slate-900">{{ number_format($dp->budget, 0, ',', ' ') }} KDA</p>
+                    </div>
+                    <div class="bg-slate-50 rounded-xl p-4">
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Durée</p>
+                        <p class="text-sm font-bold text-slate-900">{{ $dp->duration_months }} mois</p>
+                    </div>
+                    <div class="bg-slate-50 rounded-xl p-4">
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Période</p>
+                        <p class="text-sm font-bold text-slate-900">{{ $dp->start_year }} – {{ $dp->end_year }}</p>
+                    </div>
+                </div>
+
+                {{-- Localisation --}}
+                @if($dp->address)
+                <div class="bg-slate-50 rounded-xl p-4">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Adresse / Lieu du projet</p>
+                    <p class="text-sm text-slate-700">{{ $dp->address }}</p>
+                </div>
                 @endif
 
-                <div class="space-y-4">
-                    <div>
-                        <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                            Juriste <span class="text-slate-400 font-normal normal-case">(disponibles : &lt; 2 projets actifs)</span>
-                        </label>
-                        <select wire:model="selectedJuriste"
-                            class="mt-1 w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:border-iap-orange outline-none">
-                            <option value="">-- Sélectionner un juriste --</option>
-                            @foreach($juristes as $j)
-                                <option value="{{ $j->id }}">{{ $j->name }}</option>
-                            @endforeach
-                        </select>
-                        @if($juristes->isEmpty())
-                            <p class="text-amber-600 text-xs mt-1">Aucun juriste disponible.</p>
-                        @endif
-                        @error('selectedJuriste') <p class="text-red-600 text-xs mt-1">{{ $message }}</p> @enderror
-                    </div>
+                {{-- Description --}}
+                @if($dp->description)
+                <div class="bg-slate-50 rounded-xl p-4">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Description</p>
+                    <p class="text-sm text-slate-700 leading-relaxed">{{ $dp->description }}</p>
+                </div>
+                @endif
 
-                    <div>
-                        <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                            Chef de Projet <span class="text-slate-400 font-normal normal-case">(disponibles : 0 projet actif)</span>
-                        </label>
-                        <select wire:model="selectedChef"
-                            class="mt-1 w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:border-iap-orange outline-none">
-                            <option value="">-- Sélectionner un chef de projet --</option>
-                            @foreach($chefs as $c)
-                                @if((string)$c->id !== (string)$selectedJuriste)
-                                    <option value="{{ $c->id }}">{{ $c->name }}</option>
-                                @endif
-                            @endforeach
-                        </select>
-                        @if($chefs->isEmpty())
-                            <p class="text-amber-600 text-xs mt-1">Aucun chef de projet disponible.</p>
-                        @endif
-                        @error('selectedChef') <p class="text-red-600 text-xs mt-1">{{ $message }}</p> @enderror
-                    </div>
+                {{-- Soumis par --}}
+                <div class="flex items-center justify-between pt-2 border-t border-slate-100 text-xs text-slate-400">
+                    <span>Soumis par : <span class="font-semibold text-slate-600">{{ $dp->creator->name ?? 'Assistante DG' }}</span></span>
+                    <span>{{ $dp->created_at->format('d/m/Y à H:i') }}</span>
                 </div>
 
-                <div class="flex gap-3 mt-6">
-                    <button wire:click="assignPersonnel"
-                        class="flex-1 bg-iap-orange text-white font-bold py-3 rounded-xl hover:bg-orange-600 transition">
-                        Confirmer l'affectation
-                    </button>
-                    <button wire:click="closeAssignModal"
-                        class="flex-1 bg-slate-100 text-slate-700 font-bold py-3 rounded-xl hover:bg-slate-200 transition">
-                        Annuler
-                    </button>
-                </div>
+                {{-- PDF link if available --}}
+                @if($dp->pdf_path)
+                <a href="{{ asset('storage/' . $dp->pdf_path) }}" target="_blank"
+                   class="flex items-center gap-2.5 w-full bg-orange-50 border border-orange-200 hover:bg-orange-100 text-orange-700 font-semibold text-sm px-4 py-3 rounded-xl transition-colors">
+                    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                    Télécharger le document PDF joint
+                </a>
+                @endif
+
             </div>
         </div>
+    </div>
     @endif
 
-    {{-- ====================================================================
-         MODALE DÉTAIL PROJET — Composant C (gauche budget / droite donut juridique)
-    ===================================================================== --}}
-    @if($showDetailModal && $detailProject)
-        @php
-            $dp         = $detailProject;
-            $legalSteps = $dp->legalSteps;
-            $totalSpent = (float) $dp->expenses->sum('amount');
-            $budgetPct  = $dp->budget > 0 ? min(($totalSpent / $dp->budget) * 100, 100) : 0;
-            $legalPct   = (float) $legalSteps->where('is_completed', true)->sum('percentage');
-            $donutData  = $legalSteps->map(fn($s) => (float) $s->percentage)->values();
-            $donutColors= $legalSteps->map(fn($s) => $s->is_completed ? '#2dd4bf' : '#e2e8f0')->values();
-            $chartId    = 'donut_' . $dp->id . '_' . time();
-        @endphp
-        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-                <div class="px-6 py-4 border-b border-slate-100 flex items-start justify-between sticky top-0 bg-white">
-                    <div>
-                        <h3 class="font-bold text-slate-900 text-lg">{{ $dp->title }}</h3>
-                        <p class="text-xs text-slate-500">{{ $dp->school->name }} &bull; {{ $dp->nature->name ?? '—' }} &bull; {{ $dp->type }}</p>
-                    </div>
-                    <button wire:click="closeDetailModal" class="text-slate-400 hover:text-slate-600 mt-1">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                        </svg>
-                    </button>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 p-6">
-                    {{-- Gauche : Budget --}}
-                    <div class="space-y-4">
-                        <h4 class="font-bold text-slate-700 uppercase text-xs tracking-wider">Avancement financier</h4>
-                        <div class="bg-slate-50 rounded-xl p-4 space-y-3">
-                            <div class="flex justify-between text-sm">
-                                <span class="text-slate-500">Budget</span>
-                                <span class="font-bold">{{ number_format($dp->budget, 0, ',', ' ') }} DA</span>
-                            </div>
-                            <div class="flex justify-between text-sm">
-                                <span class="text-slate-500">Dépensé</span>
-                                <span class="font-bold @if($budgetPct >= 80) text-red-600 @else text-slate-700 @endif">
-                                    {{ number_format($totalSpent, 0, ',', ' ') }} DA
-                                </span>
-                            </div>
-                            <div class="flex justify-between text-sm">
-                                <span class="text-slate-500">Restant</span>
-                                <span class="font-bold text-green-700">{{ number_format(max(0, $dp->budget - $totalSpent), 0, ',', ' ') }} DA</span>
-                            </div>
-                            <div class="w-full bg-slate-200 rounded-full h-3">
-                                <div class="h-3 rounded-full @if($budgetPct >= 80) bg-red-500 @elseif($budgetPct >= 60) bg-amber-500 @else bg-blue-400 @endif"
-                                    style="width:{{ min($budgetPct, 100) }}%"></div>
-                            </div>
-                            <p class="text-center text-xs font-bold @if($budgetPct >= 80) text-red-600 @else text-slate-500 @endif">
-                                {{ number_format($budgetPct, 1) }} % consommé
-                            </p>
-                        </div>
-
-                        <div class="bg-slate-50 rounded-xl p-4 grid grid-cols-2 gap-3 text-sm">
-                            <div>
-                                <p class="text-xs text-slate-400">Juriste</p>
-                                <p class="font-semibold text-slate-700">{{ $dp->juriste->name ?? '—' }}</p>
-                            </div>
-                            <div>
-                                <p class="text-xs text-slate-400">Chef de Projet</p>
-                                <p class="font-semibold text-slate-700">{{ $dp->chefProjet->name ?? '—' }}</p>
-                            </div>
-                            <div>
-                                <p class="text-xs text-slate-400">Durée</p>
-                                <p class="font-semibold text-slate-700">{{ $dp->duration_months }} mois</p>
-                            </div>
-                            @if($dp->started_at)
-                            <div>
-                                <p class="text-xs text-slate-400">Démarré le</p>
-                                <p class="font-semibold text-slate-700">{{ $dp->started_at->format('d/m/Y') }}</p>
-                            </div>
-                            @endif
-                        </div>
-                    </div>
-
-                    {{-- Droite : Donut juridique + liste phases --}}
-                    <div class="space-y-4">
-                        <h4 class="font-bold text-slate-700 uppercase text-xs tracking-wider">Référentiel juridique</h4>
-
-                        <div class="flex items-center gap-4">
-                            <div style="width:120px;height:120px;position:relative;flex-shrink:0;">
-                                <canvas id="{{ $chartId }}" width="120" height="120"></canvas>
-                                <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;">
-                                    <span class="text-lg font-black text-teal-600">{{ number_format($legalPct, 0) }}%</span>
-                                </div>
-                            </div>
-                            <div>
-                                <p class="text-3xl font-black text-teal-600">{{ number_format($legalPct, 1) }}%</p>
-                                <p class="text-xs text-slate-500">Progression juridique</p>
-                            </div>
-                        </div>
-
-                        <div class="space-y-1.5 max-h-52 overflow-y-auto">
-                            @foreach($legalSteps as $step)
-                                <div class="flex items-center gap-2 p-2 rounded-lg {{ $step->is_completed ? 'bg-teal-50' : 'bg-slate-50' }}">
-                                    <span class="flex-shrink-0 w-4 h-4 rounded-full flex items-center justify-center
-                                        {{ $step->is_completed ? 'bg-teal-500' : 'bg-slate-300' }}">
-                                        @if($step->is_completed)
-                                            <svg class="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
-                                            </svg>
-                                        @endif
-                                    </span>
-                                    <span class="text-xs text-slate-700 flex-1 truncate {{ $step->is_completed ? 'line-through text-slate-400' : '' }}">
-                                        {{ $step->sort_order }}. {{ $step->title }}
-                                    </span>
-                                </div>
-                            @endforeach
-                        </div>
-
-                        @push('scripts')
-                        <script>
-                        (function() {
-                            const el = document.getElementById('{{ $chartId }}');
-                            if (!el || !window.Chart) return;
-                            new Chart(el, {
-                                type: 'doughnut',
-                                data: {
-                                    datasets: [{
-                                        data: @json($donutData),
-                                        backgroundColor: @json($donutColors),
-                                        borderWidth: 1,
-                                        borderColor: '#fff'
-                                    }]
-                                },
-                                options: {
-                                    cutout: '65%',
-                                    responsive: false,
-                                    plugins: { legend: { display: false }, tooltip: { enabled: false } }
-                                }
-                            });
-                        })();
-                        </script>
-                        @endpush
-                    </div>
-                </div>
-            </div>
-        </div>
-    @endif
 </div>

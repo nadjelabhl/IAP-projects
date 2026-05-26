@@ -15,6 +15,7 @@ class OdsRecord extends Model
         'issued_by',
         'type',
         'notes',
+        'pdf_path',
         'issued_at',
     ];
 

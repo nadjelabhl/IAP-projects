@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ArchiveController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\TaskController;
@@ -7,8 +8,8 @@ use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\SchoolController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OdsController;
-use App\Models\Project;
 use Illuminate\Support\Facades\Route;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -51,9 +52,7 @@ require __DIR__.'/auth.php';
 // PROFIL
 // =====================================================================
 Route::middleware('auth')->group(function () {
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    Route::get('/profile', \App\Livewire\ProfileEdit::class)->name('profile.edit');
 });
 
 // =====================================================================
@@ -66,10 +65,10 @@ Route::middleware(['auth', 'verified', 'role:admin'])->group(function () {
     // Gestion des utilisateurs
     Route::get('/admin/users', \App\Livewire\Admin\ManageUsers::class)->name('admin.users.index');
 
-    // Gestion des natures
-    Route::get('/admin/natures', \App\Livewire\Admin\ManageNatures::class)->name('admin.natures.index');
+    // Paramètres généraux (natures + phases juridiques par défaut)
+    Route::get('/admin/parametres', \App\Livewire\Admin\ManageParametres::class)->name('admin.natures.index');
 
-    // Référentiel juridique par défaut
+    // Référentiel juridique par défaut (conservé pour compatibilité)
     Route::get('/admin/defaults', \App\Livewire\Admin\ManageDefaults::class)->name('admin.defaults.index');
 
     // Gestion des écoles
@@ -92,6 +91,10 @@ Route::middleware(['auth', 'verified', 'role:assistant_dg'])->group(function () 
     // Liste des projets saisis
     Route::get('/assistant-dg/projects', [ProjectController::class, 'index'])
         ->name('assistant_dg.projects.index');
+
+    // Archives
+    Route::get('/assistant-dg/archives', \App\Livewire\Archives\ArchivesList::class)->name('assistant_dg.archives');
+    Route::get('/assistant-dg/archives/export', [ArchiveController::class, 'export'])->name('assistant_dg.archives.export');
 });
 
 // =====================================================================
@@ -108,10 +111,10 @@ Route::middleware(['auth', 'verified', 'role:dg'])->group(function () {
     Route::get('/dg/projects/{project}', [ProjectController::class, 'show'])->name('dg.projects.show');
 
     // Voir les archives
-    Route::get('/dg/archives', function () {
-        $projects = Project::where('status', 'Termine')->orderBy('closed_at', 'desc')->paginate(20);
-        return view('livewire.archives.list', ['projects' => $projects]);
-    })->name('dg.archives');
+    Route::get('/dg/archives', \App\Livewire\Archives\ArchivesList::class)->name('dg.archives');
+
+    // Télécharger les archives en Excel
+    Route::get('/dg/archives/export', [ArchiveController::class, 'export'])->name('dg.archives.export');
 
     // Gestion ODS
     Route::get('/dg/projects/{project}/ods', [OdsController::class, 'index'])
@@ -129,11 +132,11 @@ Route::middleware(['auth', 'verified', 'role:directeur_ecole'])->group(function 
         ->name('directeur_ecole.dashboard');
 
     // Liste des projets de l'école
-    Route::get('/directeur-ecole/projects', [ProjectController::class, 'index'])
+    Route::get('/directeur-ecole/projects', \App\Livewire\Director\ProjectsList::class)
         ->name('directeur_ecole.projects.index');
 
     // Détail d'un projet
-    Route::get('/directeur-ecole/projects/{project}', [ProjectController::class, 'show'])
+    Route::get('/directeur-ecole/projects/{project}', \App\Livewire\Director\ProjectDetail::class)
         ->name('directeur_ecole.projects.show');
 
     // Affectation du personnel (Juriste + Chef)
@@ -145,14 +148,14 @@ Route::middleware(['auth', 'verified', 'role:directeur_ecole'])->group(function 
         ->name('directeur_ecole.projects.archive');
 
     // Voir les archives de l'école
-    Route::get('/directeur-ecole/archives', function () {
-        $user = auth()->user();
-        $projects = Project::where('school_id', $user->school_id)
-            ->where('status', 'Termine')
-            ->orderBy('closed_at', 'desc')
-            ->paginate(20);
-        return view('livewire.archives.list', ['projects' => $projects]);
-    })->name('directeur_ecole.archives');
+    Route::get('/directeur-ecole/archives', \App\Livewire\Archives\ArchivesList::class)->name('directeur_ecole.archives');
+
+    // Télécharger les archives en Excel
+    Route::get('/directeur-ecole/archives/export', [ArchiveController::class, 'export'])->name('directeur_ecole.archives.export');
+
+    // Ressources RH
+    Route::get('/directeur-ecole/ressources-rh', \App\Livewire\Director\RessourcesRh::class)
+        ->name('directeur_ecole.rh');
 
     // Obtenir la liste RH pour AJAX
     Route::get('/directeur-ecole/schools/{school}/users', [SchoolController::class, 'users'])
@@ -237,7 +240,7 @@ Route::middleware(['auth', 'verified', 'role:chef_projet'])->group(function () {
 // NOTIFICATIONS
 // =====================================================================
 Route::middleware('auth')->group(function () {
-    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::get('/notifications', \App\Livewire\Notifications\NotificationsList::class)->name('notifications.index');
     Route::get('/notifications/unread', [NotificationController::class, 'unread'])->name('notifications.unread');
     Route::get('/notifications/count', [NotificationController::class, 'count'])->name('notifications.count');
     Route::post('/notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
@@ -249,15 +252,5 @@ Route::middleware('auth')->group(function () {
 // ARCHIVES - Pour DG et Directeurs
 // =====================================================================
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('/archives', function () {
-        $user = auth()->user();
-        $query = Project::where('status', 'Termine');
-
-        if ($user->role === 'directeur_ecole') {
-            $query->where('school_id', $user->school_id);
-        }
-
-        $projects = $query->orderBy('closed_at', 'desc')->paginate(20);
-        return view('livewire.archives.list', ['projects' => $projects]);
-    })->name('archives');
+    Route::get('/archives', \App\Livewire\Archives\ArchivesList::class)->name('archives');
 });
