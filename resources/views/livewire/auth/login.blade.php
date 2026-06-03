@@ -26,9 +26,12 @@
     to   { opacity: 1; transform: translateY(0)    scale(1); }
 }
 
-/* Alpine x-show strips inline display when showing — keep flex in a class */
+/* Hide elements with x-cloak before Alpine initialises */
+[x-cloak] { display: none !important; }
+
+/* Centering for the modal overlay — no !important so Alpine's x-show can hide it */
 .reset-overlay {
-    display: flex !important;
+    display: flex;
     align-items: center;
     justify-content: center;
 }
@@ -162,6 +165,7 @@
      position:fixed couvre bien toute la fenêtre.
 ══════════════════════════════════════════════════ -->
 <div x-show="resetOpen"
+     x-cloak
      @click.self="resetOpen = false"
      class="reset-overlay"
      style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
