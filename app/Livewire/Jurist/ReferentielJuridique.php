@@ -5,7 +5,7 @@ namespace App\Livewire\Jurist;
 use App\Models\LegalStep;
 use App\Models\OdsRecord;
 use App\Models\Project;
-use App\Models\ProjectNatureDefault;
+use App\Models\TodoTask;
 use App\Services\OdsService;
 use App\Services\NotificationService;
 use Livewire\Attributes\Layout;
@@ -69,21 +69,20 @@ class ReferentielJuridique extends Component
         }
 
         // Default new order = position just before the ODS step
-        $odsStep = LegalStep::where('project_id', $project->id)
+        $odsStep = TodoTask::where('project_id', $project->id)
             ->where('is_deletable', false)->first();
         $this->newOrder = $odsStep ? max(1, $odsStep->sort_order) : 1;
     }
 
     private function seedFromDefaults(): void
     {
-        foreach (ProjectNatureDefault::orderBy('order_number')->get() as $default) {
-            LegalStep::create([
+        foreach (LegalStep::ordered()->get() as $default) {
+            TodoTask::create([
                 'project_id'   => $this->project->id,
-                'created_by'   => auth()->id(),
-                'title'        => $default->name,
+                'title_phase'  => $default->name,
                 'percentage'   => $default->percentage,
                 'sort_order'   => $default->order_number,
-                'is_deletable' => $default->order_number < ProjectNatureDefault::max('order_number'),
+                'is_deletable' => $default->order_number < LegalStep::max('order_number'),
             ]);
         }
     }
@@ -113,7 +112,7 @@ class ReferentielJuridique extends Component
         }
 
         // ODS step (is_deletable = false) must always stay last
-        $odsStep = LegalStep::where('project_id', $this->project->id)
+        $odsStep = TodoTask::where('project_id', $this->project->id)
             ->where('is_deletable', false)
             ->first();
 
@@ -123,15 +122,14 @@ class ReferentielJuridique extends Component
             : $this->newOrder;
 
         // Shift all non-ODS steps with sort_order >= effectiveOrder up by 1
-        LegalStep::where('project_id', $this->project->id)
+        TodoTask::where('project_id', $this->project->id)
             ->where('sort_order', '>=', $effectiveOrder)
-            ->when($odsStep, fn($q) => $q->where('id', '!=', $odsStep->id))
+            ->when($odsStep, fn($q) => $q->where('id_phase', '!=', $odsStep->id_phase))
             ->increment('sort_order');
 
-        LegalStep::create([
+        TodoTask::create([
             'project_id'   => $this->project->id,
-            'created_by'   => auth()->id(),
-            'title'        => $this->newTitle,
+            'title_phase'  => $this->newTitle,
             'percentage'   => $this->newPercentage,
             'sort_order'   => $effectiveOrder,
             'is_deletable' => true,
@@ -139,8 +137,8 @@ class ReferentielJuridique extends Component
 
         // Ensure ODS step is still the very last
         if ($odsStep) {
-            $maxNonOds = LegalStep::where('project_id', $this->project->id)
-                ->where('id', '!=', $odsStep->id)
+            $maxNonOds = TodoTask::where('project_id', $this->project->id)
+                ->where('id_phase', '!=', $odsStep->id_phase)
                 ->max('sort_order') ?? 0;
             $odsStep->update(['sort_order' => $maxNonOds + 1]);
         }
@@ -154,11 +152,11 @@ class ReferentielJuridique extends Component
     // =========================================================================
     public function openEditModal(int $stepId): void
     {
-        $step = LegalStep::findOrFail($stepId);
+        $step = TodoTask::findOrFail($stepId);
         abort_if($step->project_id !== $this->project->id, 403);
 
         $this->editingStepId  = $stepId;
-        $this->editTitle      = $step->title;
+        $this->editTitle      = $step->title_phase;
         $this->editPercentage = (float) $step->percentage;
         $this->editOrder      = $step->sort_order;
         $this->editModalOpen  = true;
@@ -179,7 +177,7 @@ class ReferentielJuridique extends Component
             'editOrder.min'           => 'Le numéro d\'ordre doit être au moins 1.',
         ]);
 
-        $step        = LegalStep::findOrFail($this->editingStepId);
+        $step        = TodoTask::findOrFail($this->editingStepId);
         $currentSum  = $this->getCurrentSum($step->id);
 
         if ($currentSum + $this->editPercentage > 100) {
@@ -188,9 +186,9 @@ class ReferentielJuridique extends Component
         }
 
         $step->update([
-            'title'      => $this->editTitle,
-            'percentage' => $this->editPercentage,
-            'sort_order' => $this->editOrder,
+            'title_phase' => $this->editTitle,
+            'percentage'  => $this->editPercentage,
+            'sort_order'  => $this->editOrder,
         ]);
 
         $this->closeEditModal();
@@ -209,7 +207,7 @@ class ReferentielJuridique extends Component
     // =========================================================================
     public function deleteStep(int $stepId): void
     {
-        $step = LegalStep::findOrFail($stepId);
+        $step = TodoTask::findOrFail($stepId);
         abort_if($step->project_id !== $this->project->id, 403);
 
         if (!$step->is_deletable) {
@@ -231,12 +229,12 @@ class ReferentielJuridique extends Component
     // =========================================================================
     public function toggleStep(int $stepId): void
     {
-        $step = LegalStep::findOrFail($stepId);
+        $step = TodoTask::findOrFail($stepId);
         abort_if($step->project_id !== $this->project->id, 403);
 
         if ($step->is_completed) {
             // Décocher autorisé uniquement si aucune phase suivante n'est cochée
-            $nextChecked = LegalStep::where('project_id', $this->project->id)
+            $nextChecked = TodoTask::where('project_id', $this->project->id)
                 ->where('sort_order', '>', $step->sort_order)
                 ->where('is_completed', true)
                 ->exists();
@@ -257,11 +255,11 @@ class ReferentielJuridique extends Component
         }
 
         // Vérifier si c'est la dernière phase — PDF obligatoire avant cochage
-        $isLast = !LegalStep::where('project_id', $this->project->id)
+        $isLast = !TodoTask::where('project_id', $this->project->id)
             ->where('sort_order', '>', $step->sort_order)
             ->exists();
 
-        if ($isLast && !$step->pdf_path) {
+        if ($isLast && !$step->todo_tasks_pdf_path) {
             session()->flash('error', 'Vous devez uploader la fiche PDF avant de cocher cette phase (ODS de Démarrage).');
             return;
         }
@@ -380,11 +378,11 @@ class ReferentielJuridique extends Component
     {
         $this->validate(['stepPdf' => 'required|file|mimes:pdf|max:10240']);
 
-        $step = LegalStep::findOrFail($this->uploadingStepId);
+        $step = TodoTask::findOrFail($this->uploadingStepId);
         abort_if($step->project_id !== $this->project->id, 403);
 
         $path = $this->stepPdf->store('legal-steps', 'public');
-        $step->update(['pdf_path' => $path]);
+        $step->update(['todo_tasks_pdf_path' => $path]);
 
         $this->uploadingStepId = null;
         $this->stepPdf         = null;
@@ -396,9 +394,9 @@ class ReferentielJuridique extends Component
     // =========================================================================
     private function getCurrentSum(?int $excludeStepId = null): float
     {
-        $query = LegalStep::where('project_id', $this->project->id);
+        $query = TodoTask::where('project_id', $this->project->id);
         if ($excludeStepId) {
-            $query->where('id', '!=', $excludeStepId);
+            $query->where('id_phase', '!=', $excludeStepId);
         }
         return (float) $query->sum('percentage');
     }

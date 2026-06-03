@@ -96,11 +96,10 @@ class BudgetService
         DB::beginTransaction();
         try {
             $expense = Expense::create([
-                'project_id' => $project->id,
-                'entered_by' => $expenseData['entered_by'],
-                'description' => $expenseData['description'],
-                'amount' => $expenseData['amount'],
-                'expense_date' => $expenseData['expense_date'] ?? now(),
+                'project_id'       => $project->id,
+                'description'      => $expenseData['description'],
+                'amount'           => $expenseData['amount'],
+                'attachement_date' => $expenseData['attachement_date'] ?? $expenseData['expense_date'] ?? now(),
             ]);
 
             // Check if we need to trigger budget alert

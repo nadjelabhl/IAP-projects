@@ -8,8 +8,8 @@ use App\Models\Notification;
 use App\Models\OdsRecord;
 use App\Models\Project;
 use App\Models\ProjectNature;
-use App\Models\ProjectNatureDefault;
 use App\Models\School;
+use App\Models\TodoTask;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -57,9 +57,9 @@ class DatabaseSeeder extends Seeder
             [7, 'Émission de l\'ODS de Démarrage',         10],
         ];
         foreach ($defaults as [$order, $name, $pct]) {
-            ProjectNatureDefault::create([
+            LegalStep::create([
                 'order_number' => $order,
-                'name'         => $name,
+                'name_phase'   => $name,
                 'percentage'   => $pct,
             ]);
         }
@@ -169,13 +169,12 @@ class DatabaseSeeder extends Seeder
 
         $p2 = $this->makeProject('Construction Amphithéâtre Principal', $constructions->id, 'Investissement', $b->id, $adg->id, 80000, 18, 'En Etude', [
             'juriste_id' => $juristesB[0]->id, 'chef_projet_id' => $chefsB[0]->id,
-            'dg_consulted_at' => now()->subDays(10), 'school_director_viewed_at' => now()->subDays(8),
-        ]);
+            'consulted_by' => $dg->id,        ]);
         $this->createLegalSteps($p2, $defaults, 3, $juristesB[0]->id);
 
         $p3 = $this->makeProject('Rénovation Laboratoires Informatique', $amenagements->id, 'Exploitation', $b->id, $adg->id, 12000, 4, 'En Cours', [
             'juriste_id' => $juristesB[1]->id, 'chef_projet_id' => $chefsB[1]->id,
-            'chef_access_unlocked' => true, 'dg_consulted_at' => now()->subDays(30),
+            'chef_access_unlocked' => true, 'consulted_by' => $dg->id,
             'school_director_viewed_at' => now()->subDays(28), 'started_at' => now()->subDays(20),
         ]);
         $this->createLegalSteps($p3, $defaults, 7, $juristesB[1]->id);
@@ -189,7 +188,7 @@ class DatabaseSeeder extends Seeder
         $p4 = $this->makeProject('Acquisition Équipements Pédagogiques', $equipements->id, 'Exploitation', $b->id, $adg->id, 5000, 3, 'En Cours', [
             'juriste_id' => $juristesB[2]->id, 'chef_projet_id' => $chefsB[2]->id,
             'chef_access_unlocked' => true, 'budget_alert_sent' => true,
-            'dg_consulted_at' => now()->subDays(60), 'school_director_viewed_at' => now()->subDays(58),
+            'consulted_by' => $dg->id, 'school_director_viewed_at' => now()->subDays(58),
             'started_at' => now()->subDays(50),
         ]);
         $this->createLegalSteps($p4, $defaults, 7, $juristesB[2]->id);
@@ -203,7 +202,7 @@ class DatabaseSeeder extends Seeder
 
         $p5 = $this->makeProject('Aménagement Terrain Sportif', $terrains->id, 'Investissement', $b->id, $adg->id, 8000, 8, 'Termine', [
             'juriste_id' => $juristesB[3]->id, 'chef_projet_id' => $chefsB[3]->id,
-            'chef_access_unlocked' => true, 'dg_consulted_at' => now()->subDays(200),
+            'chef_access_unlocked' => true, 'consulted_by' => $dg->id,
             'started_at' => now()->subDays(180), 'closed_at' => now()->subDays(10),
         ]);
         $this->createLegalSteps($p5, $defaults, 7, $juristesB[3]->id);
@@ -220,19 +219,18 @@ class DatabaseSeeder extends Seeder
 
         $p7 = $this->makeProject('Étude Géotechnique du Site', $etudes->id, 'Investissement', $a->id, $adg->id, 3500, 3, 'En Etude', [
             'juriste_id' => $juristesA[0]->id, 'chef_projet_id' => $chefsA[0]->id,
-            'dg_consulted_at' => now()->subDays(15), 'school_director_viewed_at' => now()->subDays(13),
-        ]);
+            'consulted_by' => $dg->id,        ]);
         $this->createLegalSteps($p7, $defaults, 2, $juristesA[0]->id); // 30%
 
         $p8 = $this->makeProject('Rénovation Salles de Cours Bloc B', $amenagements->id, 'Exploitation', $a->id, $adg->id, 9000, 5, 'En Etude', [
             'juriste_id' => $juristesA[1]->id, 'chef_projet_id' => $chefsA[1]->id,
-            'dg_consulted_at' => now()->subDays(25), 'school_director_viewed_at' => now()->subDays(23),
+            'consulted_by' => $dg->id, 'school_director_viewed_at' => now()->subDays(23),
         ]);
         $this->createLegalSteps($p8, $defaults, 5, $juristesA[1]->id); // 75%
 
         $p9 = $this->makeProject('Équipement Laboratoire Chimie', $equipements->id, 'Exploitation', $a->id, $adg->id, 18000, 6, 'En Cours', [
             'juriste_id' => $juristesA[2]->id, 'chef_projet_id' => $chefsA[2]->id,
-            'chef_access_unlocked' => true, 'dg_consulted_at' => now()->subDays(50),
+            'chef_access_unlocked' => true, 'consulted_by' => $dg->id,
             'school_director_viewed_at' => now()->subDays(48), 'started_at' => now()->subDays(40),
         ]);
         $this->createLegalSteps($p9, $defaults, 7, $juristesA[2]->id);
@@ -246,7 +244,7 @@ class DatabaseSeeder extends Seeder
         $p10 = $this->makeProject('Acquisition Terrain Extension Nord', $terrains->id, 'Investissement', $a->id, $adg->id, 45000, 12, 'En Cours', [
             'juriste_id' => $juristesA[3]->id, 'chef_projet_id' => $chefsA[3]->id,
             'chef_access_unlocked' => true, 'budget_alert_sent' => true,
-            'dg_consulted_at' => now()->subDays(100), 'school_director_viewed_at' => now()->subDays(98),
+            'consulted_by' => $dg->id, 'school_director_viewed_at' => now()->subDays(98),
             'started_at' => now()->subDays(90),
         ]);
         $this->createLegalSteps($p10, $defaults, 7, $juristesA[3]->id);
@@ -261,7 +259,7 @@ class DatabaseSeeder extends Seeder
 
         $p11 = $this->makeProject('Réfection Façade et Toiture', $amenagements->id, 'Exploitation', $a->id, $adg->id, 6000, 4, 'Termine', [
             'juriste_id' => $juristesA[0]->id, 'chef_projet_id' => $chefsA[0]->id,
-            'chef_access_unlocked' => true, 'dg_consulted_at' => now()->subDays(180),
+            'chef_access_unlocked' => true, 'consulted_by' => $dg->id,
             'started_at' => now()->subDays(160), 'closed_at' => now()->subDays(30),
         ]);
         $this->createLegalSteps($p11, $defaults, 7, $juristesA[0]->id);
@@ -275,7 +273,7 @@ class DatabaseSeeder extends Seeder
         // ── SKIKDA (6 projets) ────────────────────────────────────────────────
         $p12 = $this->makeProject('Aménagement Laboratoire Simulation', $amenagements->id, 'Exploitation', $s->id, $adg->id, 22000, 8, 'Termine', [
             'juriste_id' => $juristesS[0]->id, 'chef_projet_id' => $chefsS[0]->id,
-            'chef_access_unlocked' => true, 'dg_consulted_at' => now()->subDays(300),
+            'chef_access_unlocked' => true, 'consulted_by' => $dg->id,
             'started_at' => now()->subDays(270), 'closed_at' => now()->subDays(60),
         ]);
         $this->createLegalSteps($p12, $defaults, 7, $juristesS[0]->id);
@@ -290,13 +288,13 @@ class DatabaseSeeder extends Seeder
 
         $p14 = $this->makeProject('Étude Réhabilitation Réseau Électrique', $etudes->id, 'Exploitation', $s->id, $adg->id, 2800, 2, 'En Etude', [
             'juriste_id' => $juristesS[1]->id, 'chef_projet_id' => $chefsS[1]->id,
-            'dg_consulted_at' => now()->subDays(20), 'school_director_viewed_at' => now()->subDays(18),
+            'consulted_by' => $dg->id, 'school_director_viewed_at' => now()->subDays(18),
         ]);
         $this->createLegalSteps($p14, $defaults, 1, $juristesS[1]->id); // 15%
 
         $p15 = $this->makeProject('Équipement Salles Multimédia', $equipements->id, 'Exploitation', $s->id, $adg->id, 14000, 5, 'En Cours', [
             'juriste_id' => $juristesS[2]->id, 'chef_projet_id' => $chefsS[2]->id,
-            'chef_access_unlocked' => true, 'dg_consulted_at' => now()->subDays(70),
+            'chef_access_unlocked' => true, 'consulted_by' => $dg->id,
             'school_director_viewed_at' => now()->subDays(68), 'started_at' => now()->subDays(55),
         ]);
         $this->createLegalSteps($p15, $defaults, 7, $juristesS[2]->id);
@@ -309,13 +307,13 @@ class DatabaseSeeder extends Seeder
 
         $p16 = $this->makeProject('Acquisition Terrain Parking', $terrains->id, 'Investissement', $s->id, $adg->id, 11000, 9, 'En Etude', [
             'juriste_id' => $juristesS[3]->id, 'chef_projet_id' => $chefsS[3]->id,
-            'dg_consulted_at' => now()->subDays(35), 'school_director_viewed_at' => now()->subDays(33),
+            'consulted_by' => $dg->id, 'school_director_viewed_at' => now()->subDays(33),
         ]);
         $this->createLegalSteps($p16, $defaults, 4, $juristesS[3]->id); // 65%
 
         $p17 = $this->makeProject('Rénovation Cuisine et Réfectoire', $amenagements->id, 'Exploitation', $s->id, $adg->id, 7500, 5, 'Termine', [
             'juriste_id' => $juristesS[0]->id, 'chef_projet_id' => $chefsS[0]->id,
-            'chef_access_unlocked' => true, 'dg_consulted_at' => now()->subDays(200),
+            'chef_access_unlocked' => true, 'consulted_by' => $dg->id,
             'started_at' => now()->subDays(180), 'closed_at' => now()->subDays(25),
         ]);
         $this->createLegalSteps($p17, $defaults, 7, $juristesS[0]->id);
@@ -331,14 +329,14 @@ class DatabaseSeeder extends Seeder
 
         $p19 = $this->makeProject('Étude Sécurité Incendie', $etudes->id, 'Exploitation', $h->id, $adg->id, 4200, 3, 'En Etude', [
             'juriste_id' => $juristesH[0]->id, 'chef_projet_id' => $chefsH[0]->id,
-            'dg_consulted_at' => now()->subDays(18), 'school_director_viewed_at' => now()->subDays(16),
+            'consulted_by' => $dg->id, 'school_director_viewed_at' => now()->subDays(16),
         ]);
         $this->createLegalSteps($p19, $defaults, 2, $juristesH[0]->id); // 30%
 
         $p20 = $this->makeProject('Rénovation Logements Personnel', $amenagements->id, 'Exploitation', $h->id, $adg->id, 19000, 10, 'En Cours', [
             'juriste_id' => $juristesH[1]->id, 'chef_projet_id' => $chefsH[1]->id,
             'chef_access_unlocked' => true, 'budget_alert_sent' => true,
-            'dg_consulted_at' => now()->subDays(80), 'school_director_viewed_at' => now()->subDays(78),
+            'consulted_by' => $dg->id, 'school_director_viewed_at' => now()->subDays(78),
             'started_at' => now()->subDays(70),
         ]);
         $this->createLegalSteps($p20, $defaults, 7, $juristesH[1]->id);
@@ -352,7 +350,7 @@ class DatabaseSeeder extends Seeder
 
         $p21 = $this->makeProject('Équipement Forage Simulation', $equipements->id, 'Investissement', $h->id, $adg->id, 35000, 8, 'En Cours', [
             'juriste_id' => $juristesH[2]->id, 'chef_projet_id' => $chefsH[2]->id,
-            'chef_access_unlocked' => true, 'dg_consulted_at' => now()->subDays(45),
+            'chef_access_unlocked' => true, 'consulted_by' => $dg->id,
             'school_director_viewed_at' => now()->subDays(43), 'started_at' => now()->subDays(35),
         ]);
         $this->createLegalSteps($p21, $defaults, 7, $juristesH[2]->id);
@@ -364,7 +362,7 @@ class DatabaseSeeder extends Seeder
 
         $p22 = $this->makeProject('Acquisition Véhicules de Terrain', $equipements->id, 'Exploitation', $h->id, $adg->id, 8000, 4, 'Termine', [
             'juriste_id' => $juristesH[3]->id, 'chef_projet_id' => $chefsH[3]->id,
-            'chef_access_unlocked' => true, 'dg_consulted_at' => now()->subDays(160),
+            'chef_access_unlocked' => true, 'consulted_by' => $dg->id,
             'started_at' => now()->subDays(145), 'closed_at' => now()->subDays(15),
         ]);
         $this->createLegalSteps($p22, $defaults, 7, $juristesH[3]->id);
@@ -458,16 +456,15 @@ class DatabaseSeeder extends Seeder
         foreach ($defaults as [$order, $name, $pct]) {
             $isChecked   = $order <= $checkedCount;
             $isDemarrage = $order === $lastOrder;
-            LegalStep::create([
-                'project_id'   => $project->id,
-                'created_by'   => $createdBy,
-                'title'        => $name,
-                'percentage'   => $pct,
-                'sort_order'   => $order,
-                'is_deletable' => !$isDemarrage,
-                'is_completed' => $isChecked,
-                'completed_at' => $isChecked ? now()->subDays(max(1, $checkedCount - $order + 5)) : null,
-                'checked_at'   => $isChecked ? now()->subDays(max(1, $checkedCount - $order + 5)) : null,
+            TodoTask::create([
+                'project_id'          => $project->id,
+                'title_phase'         => $name,
+                'percentage'          => $pct,
+                'sort_order'          => $order,
+                'is_deletable'        => !$isDemarrage,
+                'is_completed'        => $isChecked,
+                'completed_at'        => $isChecked ? now()->subDays(max(1, $checkedCount - $order + 5)) : null,
+                'checked_at'          => $isChecked ? now()->subDays(max(1, $checkedCount - $order + 5)) : null,
             ]);
         }
     }
@@ -477,7 +474,7 @@ class DatabaseSeeder extends Seeder
         OdsRecord::create([
             'project_id' => $project->id,
             'issued_by'  => $issuedBy,
-            'type'       => $type,
+            'type_ods'   => $type,
             'issued_at'  => $issuedAt,
             'notes'      => match($type) {
                 'Demarrage' => 'ODS de Démarrage émis après validation complète du référentiel juridique.',
@@ -492,11 +489,10 @@ class DatabaseSeeder extends Seeder
     {
         foreach ($expenses as [$desc, $amount, $daysAgo]) {
             Expense::create([
-                'project_id'   => $project->id,
-                'entered_by'   => $enteredBy,
-                'description'  => $desc,
-                'amount'       => $amount,
-                'expense_date' => now()->subDays($daysAgo)->format('Y-m-d'),
+                'project_id'       => $project->id,
+                'description'      => $desc,
+                'amount'           => $amount,
+                'attachement_date' => now()->subDays($daysAgo)->format('Y-m-d'),
             ]);
         }
     }

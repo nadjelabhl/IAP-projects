@@ -26,9 +26,7 @@
     </div>
     @endif
     @if(session('error'))
-    <div class="flex items-center gap-3 bg-red-50 border border-red-200 text-red-800 rounded-2xl px-5 py-3.5 text-sm font-semibold">
-        {{ session('error') }}
-    </div>
+    <p class="text-sm font-semibold text-red-600">{{ session('error') }}</p>
     @endif
 
     {{-- Notification bar --}}
@@ -160,20 +158,20 @@
                 <label class="text-xs font-bold text-slate-600 mb-1.5 block">Description <span class="text-red-400">*</span></label>
                 <input wire:model="expenseDescription" type="text" placeholder="Description de la dépense…"
                     class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400">
-                @error('expenseDescription') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
+                @error('expenseDescription') <p class="text-sm text-red-700 mt-0.5">{{ $message }}</p> @enderror
             </div>
             <div class="grid grid-cols-2 gap-4">
                 <div>
                     <label class="text-xs font-bold text-slate-600 mb-1.5 block">Montant (KDA) <span class="text-red-400">*</span></label>
                     <input wire:model="expenseAmount" type="number" min="1" step="0.01" placeholder="0"
                         class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400">
-                    @error('expenseAmount') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
+                    @error('expenseAmount') <p class="text-sm text-red-700 mt-0.5">{{ $message }}</p> @enderror
                 </div>
                 <div>
                     <label class="text-xs font-bold text-slate-600 mb-1.5 block">Date d'engagement <span class="text-red-400">*</span></label>
                     <input wire:model="expenseDate" type="date"
                         class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400">
-                    @error('expenseDate') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
+                    @error('expenseDate') <p class="text-sm text-red-700 mt-0.5">{{ $message }}</p> @enderror
                 </div>
             </div>
             <button type="submit"
@@ -373,15 +371,6 @@
                 <div class="flex items-start gap-4">
                     <span class="shrink-0 w-28 text-[10px] font-bold text-slate-400 uppercase tracking-wider pt-0.5">Description</span>
                     <p class="flex-1 text-sm text-slate-700 leading-relaxed">{{ $selectedProject->description }}</p>
-                </div>
-                @endif
-                @if($selectedProject->pdf_path)
-                <div class="pt-2">
-                    <a href="{{ asset('storage/' . $selectedProject->pdf_path) }}" target="_blank"
-                       class="inline-flex items-center gap-2 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 font-bold text-sm px-4 py-2 rounded-xl transition-colors">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
-                        Télécharger la fiche PDF
-                    </a>
                 </div>
                 @endif
             </div>

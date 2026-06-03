@@ -31,7 +31,15 @@ class LoginForm extends Form
         )) {
             RateLimiter::hit($this->throttleKey());
             throw ValidationException::withMessages([
-                'form.email' => __('auth.failed'),
+                'form.email' => 'Identifiants incorrects. Vérifiez votre email et votre mot de passe.',
+            ]);
+        }
+
+        if (!Auth::user()->is_active) {
+            Auth::logout();
+            RateLimiter::hit($this->throttleKey());
+            throw ValidationException::withMessages([
+                'form.email' => 'Votre compte est désactivé. Contactez l\'administrateur.',
             ]);
         }
 

@@ -6,6 +6,7 @@ use Livewire\Attributes\Layout;
 use Livewire\Component;
 use App\Models\User;
 use App\Models\School;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Livewire\WithPagination;
 
@@ -101,6 +102,10 @@ class ManageUsers extends Component
 
         $user->update($data);
 
+        if (!$this->is_active) {
+            DB::table('sessions')->where('user_id', $user->id)->delete();
+        }
+
         session()->flash('message', 'Utilisateur mis à jour.');
         $this->closeModal();
         $this->reset(['name', 'email', 'password', 'school_id', 'is_active']);
@@ -115,8 +120,9 @@ class ManageUsers extends Component
     public function delete()
     {
         if ($this->userToDelete) {
-            // Soft delete plutôt que supprimer définitivement
+            $userId = $this->userToDelete->id;
             $this->userToDelete->update(['is_active' => false]);
+            DB::table('sessions')->where('user_id', $userId)->delete();
             session()->flash('message', 'Utilisateur désactivé.');
         }
         $this->deleteModalOpen = false;

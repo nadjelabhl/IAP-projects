@@ -141,8 +141,6 @@
     @endif
 
     @if(session()->has('error'))
-        <div class="bg-red-50 border border-red-200 rounded-xl p-4">
-            <p class="text-sm text-red-800 font-bold">{{ session('error') }}</p>
-        </div>
+        <p class="text-sm font-semibold text-red-600">{{ session('error') }}</p>
     @endif
 </div>

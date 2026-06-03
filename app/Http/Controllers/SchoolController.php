@@ -14,7 +14,7 @@ class SchoolController extends Controller
     public function index()
     {
         $schools = School::withCount(['users', 'projects'])
-            ->orderBy('name')
+            ->orderBy('name_school')
             ->paginate(20);
 
         return view('admin.schools.index', [
@@ -28,12 +28,16 @@ class SchoolController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'name' => 'required|string|max:100|unique:schools,name',
+            'name' => 'required|string|max:100|unique:schools,name_school',
             'location' => 'nullable|string|max:150',
             'annual_budget' => 'nullable|numeric|min:0',
         ]);
 
-        School::create($request->only(['name', 'location', 'annual_budget']));
+        School::create([
+            'name_school'   => $request->name,
+            'location'      => $request->location,
+            'annual_budget' => $request->annual_budget ?? 0,
+        ]);
 
         return redirect()->back()->with('success', 'École créée avec succès');
     }
@@ -44,12 +48,16 @@ class SchoolController extends Controller
     public function update(Request $request, School $school)
     {
         $request->validate([
-            'name' => 'required|string|max:100|unique:schools,name,' . $school->id,
+            'name' => 'required|string|max:100|unique:schools,name_school,' . $school->id . ',id_school',
             'location' => 'nullable|string|max:150',
             'annual_budget' => 'nullable|numeric|min:0',
         ]);
 
-        $school->update($request->only(['name', 'location', 'annual_budget']));
+        $school->update([
+            'name_school'   => $request->name,
+            'location'      => $request->location,
+            'annual_budget' => $request->annual_budget ?? $school->annual_budget,
+        ]);
 
         return redirect()->back()->with('success', 'École mise à jour');
     }

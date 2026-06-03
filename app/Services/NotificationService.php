@@ -14,7 +14,7 @@ class NotificationService
             Notification::create([
                 'user_id'    => $userId,
                 'project_id' => $projectId,
-                'type'       => $type,
+                'type_notification' => $type,
                 'message'    => $message,
                 'priority'   => $priority,
                 'is_read'    => false,
@@ -28,7 +28,7 @@ class NotificationService
         $dgIds = User::where('role', 'dg')->where('is_active', true)->pluck('id')->toArray();
         $this->notify(
             'nouveau_projet',
-            "Nouveau projet soumis : « {$project->title} » (École {$project->school->name}).",
+            "Nouveau projet soumis : « {$project->title_project} » (École {$project->school->name_school}).",
             $dgIds,
             $project->id
         );
@@ -46,7 +46,7 @@ class NotificationService
 
         $this->notify(
             'projet_transmis',
-            "Le DG vous a transmis le projet « {$project->title} » pour affectation.",
+            "Le DG vous a transmis le projet « {$project->title_project} » pour affectation.",
             [$director->id],
             $project->id
         );
@@ -58,10 +58,10 @@ class NotificationService
         $ids = array_filter([$project->juriste_id, $project->chef_projet_id]);
 
         $juriste = $project->juriste_id
-            ? "Vous avez été affecté(e) en tant que Juriste au projet « {$project->title} »."
+            ? "Vous avez été affecté(e) en tant que Juriste au projet « {$project->title_project} »."
             : null;
         $chef = $project->chef_projet_id
-            ? "Vous avez été affecté(e) en tant que Chef de Projet au projet « {$project->title} »."
+            ? "Vous avez été affecté(e) en tant que Chef de Projet au projet « {$project->title_project} »."
             : null;
 
         if ($project->juriste_id && $juriste) {
@@ -79,7 +79,7 @@ class NotificationService
 
         $this->notify(
             'ods_demarrage',
-            "L'ODS de Démarrage a été émis pour « {$project->title} ». Votre accès est maintenant actif.",
+            "L'ODS de Démarrage a été émis pour « {$project->title_project} ». Votre accès est maintenant actif.",
             [$project->chef_projet_id],
             $project->id,
             'urgent'
@@ -101,7 +101,7 @@ class NotificationService
 
         $this->notify(
             'ods_demarrage',
-            "ODS de Démarrage émis pour le projet « {$project->title} ».",
+            "ODS de Démarrage émis pour le projet « {$project->title_project} ».",
             $ids,
             $project->id
         );
@@ -116,7 +116,7 @@ class NotificationService
 
         $this->notify(
             'ods_arret',
-            "ARRÊT — ODS d'Arrêt émis pour le projet « {$project->title} ».",
+            "ARRÊT — ODS d'Arrêt émis pour le projet « {$project->title_project} ».",
             $ids,
             $project->id,
             'urgent'
@@ -132,7 +132,7 @@ class NotificationService
 
         $this->notify(
             'ods_reprise',
-            "REPRISE — ODS de Reprise émis pour le projet « {$project->title} ».",
+            "REPRISE — ODS de Reprise émis pour le projet « {$project->title_project} ».",
             $ids,
             $project->id,
             'urgent'
@@ -171,7 +171,7 @@ class NotificationService
 
         $this->notify(
             'alerte_budget',
-            "ALERTE BUDGET — Le projet « {$project->title} » a consommé {$pct} % de son budget.",
+            "ALERTE BUDGET — Le projet « {$project->title_project} » a consommé {$pct} % de son budget.",
             $ids,
             $project->id,
             'urgent'
@@ -199,7 +199,7 @@ class NotificationService
 
         $this->notify(
             'projet_termine',
-            "Le projet « {$project->title} » a été clôturé et archivé.",
+            "Le projet « {$project->title_project} » a été clôturé et archivé.",
             $ids,
             $project->id
         );
@@ -207,7 +207,7 @@ class NotificationService
 
     public function markAsRead(int $notificationId, int $userId): bool
     {
-        $notif = Notification::where('id', $notificationId)->where('user_id', $userId)->first();
+        $notif = Notification::where('id_notification', $notificationId)->where('user_id', $userId)->first();
         if (!$notif) return false;
         $notif->update(['is_read' => true, 'read_at' => now()]);
         return true;

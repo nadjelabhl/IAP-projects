@@ -26,9 +26,7 @@
         </div>
     @endif
     @if(session('error'))
-        <div class="bg-red-50 border border-red-200 rounded-xl p-4 text-red-800 text-sm font-semibold">
-            {{ session('error') }}
-        </div>
+        <p class="text-sm font-semibold text-red-600">{{ session('error') }}</p>
     @endif
 
     {{-- ====================================================================

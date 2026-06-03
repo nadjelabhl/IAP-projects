@@ -2,8 +2,8 @@
 
 namespace App\Livewire\Admin;
 
+use App\Models\LegalStep;
 use App\Models\ProjectNature;
-use App\Models\ProjectNatureDefault;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -41,7 +41,7 @@ class ManageParametres extends Component
     {
         $nature = ProjectNature::findOrFail($id);
         $this->natureId   = $nature->id;
-        $this->natureName = $nature->name;
+        $this->natureName = $nature->name_nature;
         $this->natureModalOpen = true;
     }
 
@@ -58,10 +58,10 @@ class ManageParametres extends Component
         ]);
 
         if ($this->natureId) {
-            ProjectNature::findOrFail($this->natureId)->update(['name' => $this->natureName]);
+            ProjectNature::findOrFail($this->natureId)->update(['name_nature' => $this->natureName]);
             session()->flash('message', 'Nature mise à jour.');
         } else {
-            ProjectNature::create(['name' => $this->natureName, 'is_active' => true]);
+            ProjectNature::create(['name_nature' => $this->natureName, 'is_active' => true]);
             session()->flash('message', 'Nature créée.');
         }
 
@@ -108,16 +108,16 @@ class ManageParametres extends Component
     public function openDefaultCreate(): void
     {
         $this->resetDefault();
-        $this->orderNumber = (ProjectNatureDefault::max('order_number') ?? 0) + 1;
+        $this->orderNumber = (LegalStep::max('order_number') ?? 0) + 1;
         $this->defaultModalOpen = true;
     }
 
     public function openDefaultEdit(int $id): void
     {
-        $d = ProjectNatureDefault::findOrFail($id);
+        $d = LegalStep::findOrFail($id);
         $this->defaultId    = $id;
         $this->orderNumber  = $d->order_number;
-        $this->defaultName  = $d->name;
+        $this->defaultName  = $d->name_phase;
         $this->percentage   = (float) $d->percentage;
         $this->defaultModalOpen = true;
     }
@@ -134,7 +134,7 @@ class ManageParametres extends Component
             'percentage.required'  => 'Le pourcentage est obligatoire.',
         ]);
 
-        $currentSum = ProjectNatureDefault::when($this->defaultId, fn($q) => $q->where('id', '!=', $this->defaultId))
+        $currentSum = LegalStep::when($this->defaultId, fn($q) => $q->where('id_phase', '!=', $this->defaultId))
             ->sum('percentage');
 
         if ($currentSum + $this->percentage > 100) {
@@ -144,16 +144,16 @@ class ManageParametres extends Component
         }
 
         if ($this->defaultId) {
-            ProjectNatureDefault::findOrFail($this->defaultId)->update([
+            LegalStep::findOrFail($this->defaultId)->update([
                 'order_number' => $this->orderNumber,
-                'name'         => $this->defaultName,
+                'name_phase'   => $this->defaultName,
                 'percentage'   => $this->percentage,
             ]);
             session()->flash('message', 'Phase modifiée.');
         } else {
-            ProjectNatureDefault::create([
+            LegalStep::create([
                 'order_number' => $this->orderNumber,
-                'name'         => $this->defaultName,
+                'name_phase'   => $this->defaultName,
                 'percentage'   => $this->percentage,
             ]);
             session()->flash('message', 'Phase ajoutée.');
@@ -164,7 +164,7 @@ class ManageParametres extends Component
 
     public function deleteDefault(int $id): void
     {
-        ProjectNatureDefault::findOrFail($id)->delete();
+        LegalStep::findOrFail($id)->delete();
         session()->flash('message', 'Phase supprimée.');
     }
 
@@ -186,11 +186,11 @@ class ManageParametres extends Component
 
     public function render()
     {
-        $defaults  = ProjectNatureDefault::orderBy('order_number')->get();
+        $defaults  = LegalStep::orderBy('order_number')->get();
         $totalPct  = $defaults->sum('percentage');
 
         return view('livewire.admin.manage-parametres', [
-            'natures'  => ProjectNature::orderBy('name')->paginate(10),
+            'natures'  => ProjectNature::orderBy('name_nature')->paginate(10),
             'defaults' => $defaults,
             'totalPct' => $totalPct,
         ]);

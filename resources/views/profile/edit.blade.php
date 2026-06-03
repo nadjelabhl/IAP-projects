@@ -17,14 +17,14 @@
                     <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Nom complet</label>
                     <input type="text" name="name" value="{{ old('name', $user->name) }}"
                         class="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500">
-                    @error('name')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                    @error('name')<p class="text-sm text-red-700 mt-0.5">{{ $message }}</p>@enderror
                 </div>
 
                 <div class="mb-4">
                     <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Email</label>
                     <input type="email" name="email" value="{{ old('email', $user->email) }}"
                         class="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500">
-                    @error('email')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                    @error('email')<p class="text-sm text-red-700 mt-0.5">{{ $message }}</p>@enderror
                 </div>
 
                 <div class="mb-4">
@@ -47,7 +47,7 @@
                     <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Confirmer le mot de passe</label>
                     <input type="password" name="password_confirmation"
                         class="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500">
-                    @error('password')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                    @error('password')<p class="text-sm text-red-700 mt-0.5">{{ $message }}</p>@enderror
                 </div>
 
                 <button type="submit"

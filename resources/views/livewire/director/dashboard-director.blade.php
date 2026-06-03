@@ -214,11 +214,8 @@
 
     {{-- Nouveaux Projets --}}
     <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-        <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+        <div class="px-6 py-4 border-b border-slate-100">
             <h2 class="text-base font-black text-slate-900">Nouveaux projets</h2>
-            @if($stats['nouveau'] > 0)
-            <span class="text-xs font-bold bg-amber-100 text-amber-700 px-3 py-1 rounded-full">{{ $stats['nouveau'] }} à traiter</span>
-            @endif
         </div>
         <div class="overflow-x-auto">
             <table class="w-full">
@@ -236,11 +233,11 @@
                     @forelse($newProjects as $project)
                     <tr class="hover:bg-slate-50/50 transition-colors">
                         <td class="px-5 py-4">
-                            <p class="font-bold text-slate-900 text-sm">{{ $project->title }}</p>
-                            <p class="text-xs text-slate-500 mt-0.5">{{ $project->type }} · durée {{ $project->duration_months }} mois</p>
+                            <p class="text-sm font-bold text-slate-900">{{ $project->title_project }}</p>
+                            <p class="text-xs text-slate-400 mt-0.5">{{ $project->type_project }} · durée {{ $project->duration_months }} mois</p>
                         </td>
                         <td class="px-5 py-4 text-sm text-slate-600 whitespace-nowrap">
-                            {{ $project->nature->name ?? '—' }}
+                            {{ $project->nature->name_nature ?? '—' }}
                         </td>
                         <td class="px-5 py-4 text-sm font-bold text-slate-800 tabular-nums whitespace-nowrap">
                             {{ number_format($project->budget, 0, ',', ' ') }} KDA
@@ -297,18 +294,18 @@
             <div class="px-6 py-5 space-y-4">
                 <div>
                     <label class="text-xs font-bold text-slate-600 mb-1.5 block">Juriste <span class="text-red-400">*</span></label>
-                    <select wire:model="selectedJuriste" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400">
+                    <select wire:model="selectedJuriste" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/40 focus:border-orange-400 transition">
                         <option value="">— Sélectionner un juriste —</option>
                         @foreach($juristes as $j)
                         <option value="{{ $j->id }}">{{ $j->name }}</option>
                         @endforeach
                     </select>
                     @if($juristes->isEmpty())<p class="text-amber-600 text-xs mt-1 font-semibold">Aucun juriste disponible.</p>@endif
-                    @error('selectedJuriste') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                    @error('selectedJuriste') <p class="text-sm text-red-700 mt-0.5">{{ $message }}</p> @enderror
                 </div>
                 <div>
                     <label class="text-xs font-bold text-slate-600 mb-1.5 block">Chef de Projet <span class="text-red-400">*</span></label>
-                    <select wire:model="selectedChef" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400">
+                    <select wire:model="selectedChef" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/40 focus:border-orange-400 transition">
                         <option value="">— Sélectionner un chef de projet —</option>
                         @foreach($chefs as $c)
                         @if((string)$c->id !== (string)$selectedJuriste)
@@ -317,7 +314,7 @@
                         @endforeach
                     </select>
                     @if($chefs->isEmpty())<p class="text-amber-600 text-xs mt-1 font-semibold">Aucun chef disponible.</p>@endif
-                    @error('selectedChef') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                    @error('selectedChef') <p class="text-sm text-red-700 mt-0.5">{{ $message }}</p> @enderror
                 </div>
             </div>
             <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
@@ -340,7 +337,7 @@
             <div class="sticky top-0 bg-white px-6 py-5 border-b border-slate-100 flex items-start justify-between z-10">
                 <div>
                     <p class="text-[10px] font-bold text-orange-500 uppercase tracking-widest mb-0.5">Fiche de projet</p>
-                    <h3 class="font-black text-slate-900 text-base leading-tight">{{ $dp->title }}</h3>
+                    <h3 class="font-black text-slate-900 text-base leading-tight">{{ $dp->title_project }}</h3>
                 </div>
                 <button wire:click="closeDetailModal" class="p-2 rounded-xl text-slate-400 hover:bg-slate-100 shrink-0">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -354,15 +351,15 @@
                 <div class="grid grid-cols-2 gap-4">
                     <div class="bg-slate-50 rounded-xl p-4">
                         <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">École</p>
-                        <p class="text-sm font-bold text-slate-900">{{ $dp->school->name ?? '—' }}</p>
+                        <p class="text-sm font-bold text-slate-900">{{ $dp->school->name_school ?? '—' }}</p>
                     </div>
                     <div class="bg-slate-50 rounded-xl p-4">
                         <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Nature</p>
-                        <p class="text-sm font-bold text-slate-900">{{ $dp->nature->name ?? '—' }}</p>
+                        <p class="text-sm font-bold text-slate-900">{{ $dp->nature->name_nature ?? '—' }}</p>
                     </div>
                     <div class="bg-slate-50 rounded-xl p-4">
                         <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Type</p>
-                        <p class="text-sm font-bold text-slate-900">{{ $dp->type }}</p>
+                        <p class="text-sm font-bold text-slate-900">{{ $dp->type_project }}</p>
                     </div>
                     <div class="bg-slate-50 rounded-xl p-4">
                         <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Statut</p>
@@ -382,15 +379,15 @@
                     </div>
                     <div class="bg-slate-50 rounded-xl p-4">
                         <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Période</p>
-                        <p class="text-sm font-bold text-slate-900">{{ $dp->start_year }} – {{ $dp->end_year }}</p>
+                        <p class="text-sm font-bold text-slate-900">{{ \Carbon\Carbon::parse($dp->start_date)->format('Y') }} – {{ \Carbon\Carbon::parse($dp->end_date)->format('Y') }}</p>
                     </div>
                 </div>
 
                 {{-- Localisation --}}
-                @if($dp->address)
+                @if($dp->localisation)
                 <div class="bg-slate-50 rounded-xl p-4">
                     <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Adresse / Lieu du projet</p>
-                    <p class="text-sm text-slate-700">{{ $dp->address }}</p>
+                    <p class="text-sm text-slate-700">{{ $dp->localisation }}</p>
                 </div>
                 @endif
 
@@ -408,16 +405,6 @@
                     <span>{{ $dp->created_at->format('d/m/Y à H:i') }}</span>
                 </div>
 
-                {{-- PDF link if available --}}
-                @if($dp->pdf_path)
-                <a href="{{ asset('storage/' . $dp->pdf_path) }}" target="_blank"
-                   class="flex items-center gap-2.5 w-full bg-orange-50 border border-orange-200 hover:bg-orange-100 text-orange-700 font-semibold text-sm px-4 py-3 rounded-xl transition-colors">
-                    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                    </svg>
-                    Télécharger le document PDF joint
-                </a>
-                @endif
 
             </div>
         </div>

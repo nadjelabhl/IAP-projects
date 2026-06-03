@@ -3,7 +3,7 @@
 namespace App\Livewire\Chef;
 
 use App\Models\Expense;
-use App\Models\LegalStep;
+use App\Models\TodoTask;
 use App\Models\Notification;
 use App\Models\OdsRecord;
 use App\Models\Project;
@@ -80,7 +80,7 @@ class DashboardChef extends Component
         // Check if last ODS is Arrêt (no Reprise after)
         $lastOds = OdsRecord::where('project_id', $project->id)
             ->orderBy('issued_at', 'desc')->first();
-        if ($lastOds && $lastOds->type === 'Arret') {
+        if ($lastOds && $lastOds->type_ods === 'Arret') {
             session()->flash('error', 'Ajout de dépense bloqué : un ODS d\'Arrêt est en cours. Attendez l\'ODS de Reprise.');
             return;
         }
@@ -97,11 +97,10 @@ class DashboardChef extends Component
         ]);
 
         Expense::create([
-            'project_id'  => $project->id,
-            'entered_by'  => auth()->id(),
-            'description' => $this->expenseDescription,
-            'amount'      => $this->expenseAmount,
-            'expense_date'=> $this->expenseDate,
+            'project_id'       => $project->id,
+            'description'      => $this->expenseDescription,
+            'amount'           => $this->expenseAmount,
+            'attachement_date' => $this->expenseDate,
         ]);
 
         // Vérifier le seuil 80 %
@@ -163,7 +162,7 @@ class DashboardChef extends Component
     {
         if (!$this->selectedProjectId) return null;
 
-        return Project::where('id', $this->selectedProjectId)
+        return Project::where('id_project', $this->selectedProjectId)
             ->where('chef_projet_id', auth()->id())
             ->where('chef_access_unlocked', true)
             ->first();
@@ -185,7 +184,7 @@ class DashboardChef extends Component
 
         if ($selectedProject) {
             $expenses   = Expense::where('project_id', $selectedProject->id)
-                ->orderBy('expense_date', 'desc')->get();
+                ->orderBy('attachement_date', 'desc')->get();
             $totalSpent = (float) $expenses->sum('amount');
             $budgetPct  = $selectedProject->budget > 0
                 ? min(($totalSpent / $selectedProject->budget) * 100, 100)
@@ -195,7 +194,7 @@ class DashboardChef extends Component
 
             // Lock expenses if last ODS is an Arrêt (no subsequent Reprise)
             $lastOds = $odsHistory->first(); // already ordered by issued_at desc
-            $expensesLocked = $lastOds && $lastOds->type === 'Arret';
+            $expensesLocked = $lastOds && $lastOds->type_ods === 'Arret';
         }
 
         $notifications = Notification::where('user_id', auth()->id())
@@ -214,14 +213,14 @@ class DashboardChef extends Component
             $odsModalRecord = OdsRecord::with('issuedBy')->find($this->odsModalId);
 
             if ($odsModalRecord) {
-                $odsModalPdfPath = $odsModalRecord->pdf_path;
+                $odsModalPdfPath = $odsModalRecord->ods_record_pdf_path;
 
                 // For Démarrage ODS with no stored PDF, fall back to the last legal step's PDF
-                if (!$odsModalPdfPath && $odsModalRecord->type === 'Demarrage') {
-                    $lastStep = LegalStep::where('project_id', $odsModalRecord->project_id)
+                if (!$odsModalPdfPath && $odsModalRecord->type_ods === 'Demarrage') {
+                    $lastStep = TodoTask::where('project_id', $odsModalRecord->project_id)
                         ->orderBy('sort_order', 'desc')
                         ->first();
-                    $odsModalPdfPath = $lastStep?->pdf_path;
+                    $odsModalPdfPath = $lastStep?->todo_tasks_pdf_path;
                 }
             }
         }

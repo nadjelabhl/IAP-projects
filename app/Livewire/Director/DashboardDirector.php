@@ -66,15 +66,14 @@ class DashboardDirector extends Component
             'selectedChef.required'     => 'Veuillez sélectionner un chef de projet.',
         ]);
 
-        $project = Project::where('id', $this->projectIdAssign)
+        $project = Project::where('id_project', $this->projectIdAssign)
             ->where('school_id', $this->school->id)
             ->firstOrFail();
 
         $project->update([
-            'juriste_id'                => $this->selectedJuriste,
-            'chef_projet_id'            => $this->selectedChef,
-            'status'                    => 'En Etude',
-            'school_director_viewed_at' => now(),
+            'juriste_id'    => $this->selectedJuriste,
+            'chef_projet_id'=> $this->selectedChef,
+            'status'        => 'En Etude',
         ]);
 
         $this->notificationService->notifyAssignment($project->fresh());
@@ -89,6 +88,7 @@ class DashboardDirector extends Component
     {
         $this->detailProjectId = $projectId;
         $this->showDetailModal = true;
+
     }
 
     public function closeDetailModal(): void
@@ -102,7 +102,7 @@ class DashboardDirector extends Component
     // =========================================================================
     public function markNotificationRead(int $id): void
     {
-        Notification::where('id', $id)
+        Notification::where('id_notification', $id)
             ->where('user_id', auth()->id())
             ->update(['is_read' => true, 'read_at' => now()]);
     }
@@ -125,6 +125,7 @@ class DashboardDirector extends Component
         // New projects needing assignment
         $newProjects = Project::where('school_id', $sid)
             ->where('status', 'Nouveau')
+            ->whereNotNull('consulted_by')
             ->with('nature')
             ->latest()
             ->get();
@@ -178,7 +179,7 @@ class DashboardDirector extends Component
             }
 
             return [
-                'title'       => $p->title,
+                'title'       => $p->title_project,
                 'status'      => $p->status,
                 'leftMonths'  => $leftMonths,
                 'widthMonths' => $widthMonths,

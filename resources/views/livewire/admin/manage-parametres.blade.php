@@ -129,7 +129,7 @@
                 <label class="block text-xs font-bold text-slate-600 mb-1.5">Nom <span class="text-red-400">*</span></label>
                 <input type="text" wire:model="natureName" placeholder="Ex : Constructions / Infrastructures"
                     class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400">
-                @error('natureName') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
+                @error('natureName') <p class="text-sm text-red-700 mt-0.5">{{ $message }}</p> @enderror
             </div>
             <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
                 <button wire:click="closeNatureModal"
@@ -177,21 +177,21 @@
                 </button>
             </div>
             <div class="px-6 py-5 space-y-4">
-                @php $ic = 'w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400'; @endphp
+                @php $ic = 'w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/40 focus:border-orange-400 transition'; @endphp
                 <div>
                     <label class="block text-xs font-bold text-slate-600 mb-1.5">N° d'ordre <span class="text-red-400">*</span></label>
                     <input wire:model="orderNumber" type="number" min="1" class="{{ $ic }}">
-                    @error('orderNumber') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
+                    @error('orderNumber') <p class="text-sm text-red-700 mt-0.5">{{ $message }}</p> @enderror
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-slate-600 mb-1.5">Nom de la phase <span class="text-red-400">*</span></label>
                     <input wire:model="defaultName" type="text" placeholder="Ex : Étude de faisabilité" class="{{ $ic }}">
-                    @error('defaultName') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
+                    @error('defaultName') <p class="text-sm text-red-700 mt-0.5">{{ $message }}</p> @enderror
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-slate-600 mb-1.5">Pourcentage (%) <span class="text-red-400">*</span></label>
                     <input wire:model="percentage" type="number" step="1" min="1" max="100" class="{{ $ic }}">
-                    @error('percentage') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
+                    @error('percentage') <p class="text-sm text-red-700 mt-0.5">{{ $message }}</p> @enderror
                 </div>
             </div>
             <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">

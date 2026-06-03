@@ -20,7 +20,7 @@ class ManageNatures extends Component
     public $natureToDelete;
 
     protected $rules = [
-        'name' => 'required|string|min:3|max:100|unique:project_natures,name',
+        'name' => 'required|string|min:3|max:100|unique:project_natures,name_nature',
     ];
 
     protected $messages = [
@@ -34,8 +34,8 @@ class ManageNatures extends Component
         $this->validate();
 
         ProjectNature::create([
-            'name' => $this->name,
-            'is_active' => $this->is_active,
+            'name_nature' => $this->name,
+            'is_active'   => $this->is_active,
         ]);
 
         session()->flash('message', 'Nature de projet créée avec succès.');
@@ -47,7 +47,7 @@ class ManageNatures extends Component
     {
         $nature = ProjectNature::findOrFail($id);
         $this->nature_id = $nature->id;
-        $this->name = $nature->name;
+        $this->name = $nature->name_nature;
         $this->is_active = $nature->is_active;
         $this->openModal();
     }
@@ -55,13 +55,13 @@ class ManageNatures extends Component
     public function update()
     {
         $this->validate([
-            'name' => 'required|string|min:3|max:100|unique:project_natures,name,' . $this->nature_id,
+            'name' => 'required|string|min:3|max:100|unique:project_natures,name_nature,' . $this->nature_id . ',id_nature',
         ]);
 
         $nature = ProjectNature::findOrFail($this->nature_id);
         $nature->update([
-            'name' => $this->name,
-            'is_active' => $this->is_active,
+            'name_nature' => $this->name,
+            'is_active'   => $this->is_active,
         ]);
 
         session()->flash('message', 'Nature de projet mise à jour.');
@@ -106,7 +106,7 @@ class ManageNatures extends Component
     public function render()
     {
         return view('livewire.admin.manage-natures', [
-            'natures' => ProjectNature::orderBy('name')->paginate(10)
+            'natures' => ProjectNature::orderBy('name_nature')->paginate(10)
         ]);
     }
 }

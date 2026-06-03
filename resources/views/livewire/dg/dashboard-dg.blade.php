@@ -66,7 +66,7 @@
     @foreach($schoolsData as $item)
     <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
         <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-900">
-            <h3 class="text-sm font-black text-white uppercase tracking-wide">{{ $item['school']->name }}</h3>
+            <h3 class="text-sm font-black text-white uppercase tracking-wide">{{ $item['school']->name_school }}</h3>
             <span class="text-xs text-slate-400 font-semibold">{{ $item['projects']->count() }} projet(s) actif(s)</span>
         </div>
 
@@ -84,17 +84,30 @@
                     <div class="flex-1 min-w-0">
                         <div class="flex items-start justify-between gap-3 mb-2">
                             <div class="min-w-0">
-                                <p class="font-bold text-slate-900 truncate">{{ $proj['title'] }}</p>
-                                <p class="text-xs text-slate-500 mt-0.5">{{ $proj['nature']['name'] ?? '—' }} &bull; {{ $proj['type'] }}</p>
+                                <p class="font-bold text-slate-900 truncate">{{ $proj['title_project'] }}</p>
+                                <p class="text-xs text-slate-500 mt-0.5">{{ $proj['nature']['name_nature'] ?? '—' }} &bull; {{ $proj['type_project'] }}</p>
                             </div>
                             <div class="flex items-center gap-2 shrink-0">
                                 <button wire:click="openFiche({{ $proj['id'] }})"
-                                   title="Consulter la fiche de projet"
-                                   class="w-8 h-8 rounded-lg bg-blue-50 hover:bg-blue-100 border border-blue-200 flex items-center justify-center text-blue-600 transition-colors">
+                                    title="Consulter la fiche de projet"
+                                    class="w-8 h-8 rounded-lg bg-blue-50 hover:bg-blue-100 border border-blue-200 flex items-center justify-center text-blue-600 transition-colors">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                                     </svg>
                                 </button>
+                                @if($proj['status'] === 'Nouveau')
+                                    @if(is_null($proj['consulted_by']))
+                                    <button wire:click="consultProject({{ $proj['id'] }})"
+                                        title="Valider — transmettre au directeur d'école"
+                                        class="w-9 h-9 rounded bg-emerald-500 hover:bg-emerald-600 flex items-center justify-center text-white text-xs font-black transition-colors shadow-sm">
+                                        OK
+                                    </button>
+                                    @else
+                                    <span class="w-9 h-9 rounded bg-emerald-100 flex items-center justify-center" title="Transmis au directeur d'école">
+                                        <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                                    </span>
+                                    @endif
+                                @endif
                                 <x-status-badge :status="$proj['status']"/>
                             </div>
                         </div>
@@ -125,11 +138,11 @@
     {{-- MODAL FICHE DE PROJET --}}
     @if($ficheProject)
     <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-         wire:click.self="closeFiche">
+        wire:click.self="closeFiche">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-auto overflow-hidden">
             <div class="flex items-start justify-between px-6 py-5 border-b border-slate-100">
                 <div>
-                    <h3 class="font-black text-slate-900 text-lg leading-tight">{{ $ficheProject->title }}</h3>
+                    <h3 class="font-black text-slate-900 text-lg leading-tight">{{ $ficheProject->title_project }}</h3>
                     <x-status-badge :status="$ficheProject->status" class="mt-1"/>
                 </div>
                 <button wire:click="closeFiche" class="shrink-0 ml-4 w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-colors">
@@ -139,13 +152,13 @@
             <div class="px-6 py-5 space-y-3 max-h-[70vh] overflow-y-auto">
                 @php
                     $rows = [
-                        ['École',      $ficheProject->school->name ?? '—'],
-                        ['Nature',     $ficheProject->nature->name ?? '—'],
-                        ['Type',       $ficheProject->type],
+                        ['École',      $ficheProject->school->name_school ?? '—'],
+                        ['Nature',     $ficheProject->nature->name_nature ?? '—'],
+                        ['Type',       $ficheProject->type_project],
                         ['Budget',     number_format($ficheProject->budget, 0, ',', ' ') . ' KDA'],
                         ['Durée',      $ficheProject->duration_months . ' mois'],
                         ['Période',    ($ficheProject->start_year ?? '—') . ' → ' . ($ficheProject->end_year ?? '—')],
-                        ['Adresse',    $ficheProject->address ?? '—'],
+                        ['Adresse',    $ficheProject->localisation ?? '—'],
                         ['Soumis par', $ficheProject->creator->name ?? '—'],
                     ];
                 @endphp
@@ -159,15 +172,6 @@
                 <div class="flex items-start gap-4">
                     <span class="shrink-0 w-28 text-[10px] font-bold text-slate-400 uppercase tracking-wider pt-0.5">Description</span>
                     <p class="flex-1 text-sm text-slate-700 leading-relaxed">{{ $ficheProject->description }}</p>
-                </div>
-                @endif
-                @if($ficheProject->pdf_path)
-                <div class="pt-2">
-                    <a href="{{ asset('storage/' . $ficheProject->pdf_path) }}" target="_blank"
-                       class="inline-flex items-center gap-2 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 font-bold text-sm px-4 py-2 rounded-xl transition-colors">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
-                        Télécharger la fiche PDF
-                    </a>
                 </div>
                 @endif
             </div>

@@ -2,34 +2,34 @@
 
 namespace App\Livewire\Admin;
 
-use App\Models\ProjectNatureDefault;
+use App\Models\LegalStep;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
 #[Layout('layouts.app')]
 class ManageDefaults extends Component
 {
-    public bool  $isModalOpen  = false;
-    public ?int  $editingId    = null;
-    public int   $orderNumber  = 1;
+    public bool   $isModalOpen = false;
+    public ?int   $editingId   = null;
+    public int    $orderNumber = 1;
     public string $name        = '';
     public float  $percentage  = 0;
 
     public function openCreate(): void
     {
         $this->resetForm();
-        $this->orderNumber = (ProjectNatureDefault::max('order_number') ?? 0) + 1;
+        $this->orderNumber = (LegalStep::max('order_number') ?? 0) + 1;
         $this->isModalOpen = true;
     }
 
     public function openEdit(int $id): void
     {
-        $default = ProjectNatureDefault::findOrFail($id);
-        $this->editingId    = $id;
-        $this->orderNumber  = $default->order_number;
-        $this->name         = $default->name;
-        $this->percentage   = (float) $default->percentage;
-        $this->isModalOpen  = true;
+        $default = LegalStep::findOrFail($id);
+        $this->editingId   = $id;
+        $this->orderNumber = $default->order_number;
+        $this->name        = $default->name;
+        $this->percentage  = (float) $default->percentage;
+        $this->isModalOpen = true;
     }
 
     public function save(): void
@@ -40,9 +40,10 @@ class ManageDefaults extends Component
             'percentage'  => 'required|numeric|min:0.01|max:100',
         ]);
 
-        // Vérifier que la somme ne dépasse pas 100 %
-        $currentSum = ProjectNatureDefault::when($this->editingId, fn($q) => $q->where('id', '!=', $this->editingId))
-            ->sum('percentage');
+        $currentSum = LegalStep::when(
+            $this->editingId,
+            fn($q) => $q->where('id_phase', '!=', $this->editingId)
+        )->sum('percentage');
 
         if ($currentSum + $this->percentage > 100) {
             $available = 100 - $currentSum;
@@ -51,14 +52,14 @@ class ManageDefaults extends Component
         }
 
         if ($this->editingId) {
-            ProjectNatureDefault::findOrFail($this->editingId)->update([
+            LegalStep::findOrFail($this->editingId)->update([
                 'order_number' => $this->orderNumber,
                 'name'         => $this->name,
                 'percentage'   => $this->percentage,
             ]);
             session()->flash('success', 'Phase par défaut modifiée.');
         } else {
-            ProjectNatureDefault::create([
+            LegalStep::create([
                 'order_number' => $this->orderNumber,
                 'name'         => $this->name,
                 'percentage'   => $this->percentage,
@@ -71,7 +72,7 @@ class ManageDefaults extends Component
 
     public function delete(int $id): void
     {
-        ProjectNatureDefault::findOrFail($id)->delete();
+        LegalStep::findOrFail($id)->delete();
         session()->flash('success', 'Phase supprimée.');
     }
 
@@ -91,7 +92,7 @@ class ManageDefaults extends Component
 
     public function render()
     {
-        $defaults = ProjectNatureDefault::orderBy('order_number')->get();
+        $defaults = LegalStep::ordered()->get();
         $totalPct = $defaults->sum('percentage');
 
         return view('livewire.admin.manage-defaults', compact('defaults', 'totalPct'));

@@ -4,7 +4,7 @@ namespace App\Livewire;
 
 use Livewire\Component;
 use App\Models\Project;
-use App\Models\Task;
+use App\Models\TodoTask;
 
 class JuristTaskManager extends Component
 {
@@ -21,11 +21,10 @@ class JuristTaskManager extends Component
     {
         $this->validate();
 
-        Task::create([
-            'project_id' => $this->project->id,
-            'created_by' => auth()->id(),
-            'title' => $this->title,
-            'percentage' => $this->percentage,
+        TodoTask::create([
+            'project_id'  => $this->project->id,
+            'title_phase' => $this->title,
+            'percentage'  => $this->percentage,
         ]);
 
         $this->reset(['title', 'percentage']);
@@ -34,7 +33,7 @@ class JuristTaskManager extends Component
 
     public function toggleComplete($taskId)
     {
-        $task = Task::find($taskId);
+        $task = TodoTask::find($taskId);
         $task->update([
             'is_completed' => !$task->is_completed,
             'completed_at' => !$task->is_completed ? now() : null

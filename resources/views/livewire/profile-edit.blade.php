@@ -38,13 +38,13 @@
             <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Modifier le nom</p>
             <div class="flex gap-3">
                 <input wire:model="name" type="text" placeholder="Nom complet"
-                    class="flex-1 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent">
+                    class="flex-1 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-400/40 focus:border-orange-400 transition">
                 <button wire:click="saveProfile"
                     class="shrink-0 bg-orange-500 hover:bg-orange-600 text-white font-bold text-sm px-5 py-2.5 rounded-xl transition-colors">
                     Enregistrer
                 </button>
             </div>
-            @error('name') <p class="text-red-500 text-xs mt-2">{{ $message }}</p> @enderror
+            @error('name') <p class="text-sm text-red-700 mt-2">{{ $message }}</p> @enderror
         </div>
 
         {{-- Changer le mot de passe --}}
@@ -53,17 +53,17 @@
             <div class="space-y-3">
                 <div>
                     <input wire:model="currentPassword" type="password" placeholder="Mot de passe actuel"
-                        class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent">
-                    @error('currentPassword') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                        class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/40 focus:border-orange-400 transition">
+                    @error('currentPassword') <p class="text-sm text-red-700 mt-1">{{ $message }}</p> @enderror
                 </div>
                 <div>
                     <input wire:model="newPassword" type="password" placeholder="Nouveau mot de passe"
-                        class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent">
-                    @error('newPassword') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                        class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/40 focus:border-orange-400 transition">
+                    @error('newPassword') <p class="text-sm text-red-700 mt-1">{{ $message }}</p> @enderror
                 </div>
                 <div>
                     <input wire:model="newPassword_confirmation" type="password" placeholder="Confirmer le nouveau mot de passe"
-                        class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent">
+                        class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/40 focus:border-orange-400 transition">
                 </div>
                 <button wire:click="changePassword"
                     class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold text-sm py-2.5 rounded-xl transition-colors">

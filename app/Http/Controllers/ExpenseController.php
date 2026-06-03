@@ -23,7 +23,7 @@ class ExpenseController extends Controller
         }
 
         $expenses = Expense::where('project_id', $project->id)
-            ->orderBy('expense_date', 'desc')
+            ->orderBy('attachement_date', 'desc')
             ->get();
 
         $totalSpent = $expenses->sum('amount');
@@ -60,11 +60,10 @@ class ExpenseController extends Controller
 
         // Créer la dépense
         Expense::create([
-            'project_id' => $project->id,
-            'entered_by' => $user->id,
-            'description' => $request->description,
-            'amount' => $request->amount,
-            'expense_date' => $request->expense_date,
+            'project_id'       => $project->id,
+            'description'      => $request->description,
+            'amount'           => $request->amount,
+            'attachement_date' => $request->expense_date,
         ]);
 
         // Calculer le total des dépenses
@@ -80,11 +79,11 @@ class ExpenseController extends Controller
 
             if ($director) {
                 Notification::create([
-                    'user_id' => $director->id,
-                    'project_id' => $project->id,
-                    'type' => 'budget_alert',
-                    'priority' => 'high',
-                    'message' => "ALERTE BUDGET: Le projet '{$project->title}' a atteint " . round($percentageSpent) . "% du budget alloué ({$totalSpent} DA sur {$project->budget} DA)",
+                    'user_id'           => $director->id,
+                    'project_id'        => $project->id,
+                    'type_notification' => 'alerte_budget',
+                    'priority'          => 'urgent',
+                    'message'           => "ALERTE BUDGET: Le projet '{$project->title_project}' a atteint " . round($percentageSpent) . "% du budget alloué ({$totalSpent} DA sur {$project->budget} DA)",
                 ]);
             }
 

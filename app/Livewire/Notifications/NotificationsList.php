@@ -14,7 +14,7 @@ class NotificationsList extends Component
 
     public function markRead(int $id): void
     {
-        Notification::where('id', $id)
+        Notification::where('id_notification', $id)
             ->where('user_id', auth()->id())
             ->update(['is_read' => true, 'read_at' => now()]);
     }
@@ -28,7 +28,7 @@ class NotificationsList extends Component
 
     public function delete(int $id): void
     {
-        Notification::where('id', $id)
+        Notification::where('id_notification', $id)
             ->where('user_id', auth()->id())
             ->delete();
     }

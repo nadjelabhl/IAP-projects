@@ -175,15 +175,6 @@
                 </div>
                 @endif
 
-                @if($ficheProject->pdf_path)
-                <div class="pt-2">
-                    <a href="{{ asset('storage/' . $ficheProject->pdf_path) }}" target="_blank"
-                       class="inline-flex items-center gap-2 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 font-bold text-sm px-4 py-2 rounded-xl transition-colors">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
-                        Télécharger la fiche PDF
-                    </a>
-                </div>
-                @endif
             </div>
 
             {{-- Modal footer --}}

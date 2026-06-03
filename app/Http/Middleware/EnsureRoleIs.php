@@ -16,12 +16,19 @@ class EnsureRoleIs
      */
     public function handle(Request $request, Closure $next, ...$roles): Response
     {
-        // Vérifier que l'utilisateur est authentifié
         if (!$request->user()) {
             return redirect()->route('login');
         }
 
-        // Vérifier que le rôle de l'utilisateur est dans la liste autorisée
+        if (!$request->user()->is_active) {
+            auth()->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+            return redirect()->route('login')->withErrors([
+                'email' => 'Votre compte a été désactivé. Contactez l\'administrateur.',
+            ]);
+        }
+
         if (!in_array($request->user()->role, $roles)) {
             abort(403, 'Accès refusé. Votre rôle n\'est pas autorisé pour cette action.');
         }

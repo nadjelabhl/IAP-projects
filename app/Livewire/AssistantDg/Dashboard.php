@@ -21,21 +21,19 @@ class Dashboard extends Component
 
     public function markNotificationRead(int $id): void
     {
-        $notification = Notification::where('id', $id)
+        Notification::where('id_notification', $id)
             ->where('user_id', auth()->id())
-            ->firstOrFail();
-
-        $notification->update(['is_read' => true, 'read_at' => now()]);
+            ->update(['is_read' => true, 'read_at' => now()]);
     }
 
     public function render()
     {
         $stats = [
-            'total_projects' => Project::count(),
-            'nouveau'        => Project::where('status', 'Nouveau')->count(),
-            'en_etude'       => Project::where('status', 'En Etude')->count(),
-            'en_cours'       => Project::where('status', 'En Cours')->count(),
-            'termine'        => Project::where('status', 'Termine')->count(),
+            'total'    => Project::count(),
+            'nouveau'  => Project::where('status', 'Nouveau')->count(),
+            'en_etude' => Project::where('status', 'En Etude')->count(),
+            'en_cours' => Project::where('status', 'En Cours')->count(),
+            'termine'  => Project::where('status', 'Termine')->count(),
         ];
 
         $allProjects = Project::whereNotIn('status', ['Termine'])
@@ -44,9 +42,7 @@ class Dashboard extends Component
             ->map(function ($p) {
                 $legalPct   = (float) $p->legalSteps->where('is_completed', true)->sum('percentage');
                 $totalSpent = (float) $p->expenses->sum('amount');
-                $budgetPct  = $p->budget > 0
-                    ? min(($totalSpent / $p->budget) * 100, 100)
-                    : 0;
+                $budgetPct  = $p->budget > 0 ? min(($totalSpent / $p->budget) * 100, 100) : 0;
 
                 return array_merge($p->toArray(), [
                     'legal_progress'     => $legalPct,
@@ -56,14 +52,14 @@ class Dashboard extends Component
             })
             ->groupBy('school_id');
 
-        $schools = School::all()->map(fn ($school) => [
+        $schoolsData = School::orderBy('name_school')->get()->map(fn ($school) => [
             'school'   => $school,
             'projects' => $allProjects->get($school->id, collect()),
         ]);
 
         return view('livewire.assistant-dg.dashboard', [
             'stats'         => $stats,
-            'schoolsData'   => $schools,
+            'schoolsData'   => $schoolsData,
             'notifications' => Notification::where('user_id', auth()->id())
                 ->orderBy('created_at', 'desc')->limit(15)->get(),
             'unreadCount'   => Notification::where('user_id', auth()->id())

@@ -2,10 +2,9 @@
 
 namespace App\Services;
 
-use App\Models\LegalStep;
 use App\Models\OdsRecord;
 use App\Models\Project;
-use App\Models\Task;
+use App\Models\TodoTask;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
@@ -21,8 +20,8 @@ class OdsService
      */
     public function canEmitDemarrage(Project $project): bool
     {
-        $total = Task::where('project_id', $project->id)->sum('percentage');
-        $completed = Task::where('project_id', $project->id)
+        $total = TodoTask::where('project_id', $project->id)->sum('percentage');
+        $completed = TodoTask::where('project_id', $project->id)
             ->where('is_completed', true)
             ->sum('percentage');
 
@@ -41,17 +40,17 @@ class OdsService
 
         DB::beginTransaction();
         try {
-            $lastStep = LegalStep::where('project_id', $project->id)
+            $lastStep = TodoTask::where('project_id', $project->id)
                 ->orderBy('sort_order', 'desc')
                 ->first();
 
             $ods = OdsRecord::create([
-                'project_id' => $project->id,
-                'issued_by'  => $juriste->id,
-                'type'       => 'Demarrage',
-                'notes'      => $notes,
-                'pdf_path'   => $lastStep?->pdf_path,
-                'issued_at'  => now(),
+                'project_id'          => $project->id,
+                'issued_by'           => $juriste->id,
+                'type_ods'            => 'Demarrage',
+                'notes'               => $notes,
+                'ods_record_pdf_path' => $lastStep?->todo_tasks_pdf_path,
+                'issued_at'           => now(),
             ]);
 
             $project->update([
@@ -86,12 +85,12 @@ class OdsService
         }
 
         $ods = OdsRecord::create([
-            'project_id' => $project->id,
-            'issued_by'  => $juriste->id,
-            'type'       => 'Arret',
-            'notes'      => $notes,
-            'pdf_path'   => $pdfPath,
-            'issued_at'  => now(),
+            'project_id'          => $project->id,
+            'issued_by'           => $juriste->id,
+            'type_ods'            => 'Arret',
+            'notes'               => $notes,
+            'ods_record_pdf_path' => $pdfPath,
+            'issued_at'           => now(),
         ]);
 
         $this->notificationService->notifyOdsArret($project);
@@ -109,12 +108,12 @@ class OdsService
         }
 
         $ods = OdsRecord::create([
-            'project_id' => $project->id,
-            'issued_by'  => $juriste->id,
-            'type'       => 'Reprise',
-            'notes'      => $notes,
-            'pdf_path'   => $pdfPath,
-            'issued_at'  => now(),
+            'project_id'          => $project->id,
+            'issued_by'           => $juriste->id,
+            'type_ods'            => 'Reprise',
+            'notes'               => $notes,
+            'ods_record_pdf_path' => $pdfPath,
+            'issued_at'           => now(),
         ]);
 
         $this->notificationService->notifyOdsReprise($project);

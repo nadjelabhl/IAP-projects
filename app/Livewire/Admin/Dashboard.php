@@ -148,7 +148,7 @@ class Dashboard extends Component
             'totalSchools'    => School::count(),
             'projetsParEcole' => $projetsParEcole,
             'users'           => User::with('school')->orderBy('name')->paginate(10),
-            'schools'         => School::orderBy('name')->get(),
+            'schools'         => School::orderBy('name_school')->get(),
             'deletingUser'    => $this->deletingId ? User::find($this->deletingId) : null,
         ]);
     }

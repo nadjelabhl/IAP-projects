@@ -1,6 +1,5 @@
 <div class="p-8 space-y-6">
 
-    {{-- Flash --}}
     @if(session('message'))
         <div class="flex items-center gap-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl px-5 py-3.5 text-sm font-semibold">
             <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
@@ -8,7 +7,6 @@
         </div>
     @endif
 
-    {{-- Header --}}
     <div class="flex items-center justify-between">
         <div>
             <h1 class="text-2xl font-black text-slate-900 tracking-tight">Natures de projets</h1>
@@ -21,7 +19,6 @@
         </button>
     </div>
 
-    {{-- Table --}}
     <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
         <table class="w-full">
             <thead>
@@ -55,7 +52,6 @@
         @endif
     </div>
 
-    {{-- Modal Create/Edit --}}
     @if($isModalOpen)
     <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" wire:click="closeModal"></div>
@@ -66,21 +62,22 @@
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
             </div>
+            <form wire:submit.prevent="{{ $nature_id ? 'update' : 'create' }}">
             <div class="px-6 py-5">
                 <label class="block text-xs font-bold text-slate-600 mb-1.5">Nom <span class="text-red-400">*</span></label>
                 <input type="text" wire:model="name" placeholder="Ex : Constructions / Infrastructures"
-                    class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400">
-                @error('name') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
+                    class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/40 focus:border-orange-400 transition">
+                @error('name') <p class="text-sm text-red-700 mt-0.5">{{ $message }}</p> @enderror
             </div>
             <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
-                <button wire:click="closeModal" class="px-5 py-2.5 rounded-xl text-sm font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-100">Annuler</button>
-                <button wire:click="{{ $nature_id ? 'update' : 'create' }}" class="px-5 py-2.5 rounded-xl text-sm font-bold text-white bg-orange-500 hover:bg-orange-600">Enregistrer</button>
+                <button type="button" wire:click="closeModal" class="px-5 py-2.5 rounded-xl text-sm font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-100">Annuler</button>
+                <button type="submit" class="px-5 py-2.5 rounded-xl text-sm font-bold text-white bg-orange-500 hover:bg-orange-600">Enregistrer</button>
             </div>
+            </form>
         </div>
     </div>
     @endif
 
-    {{-- Modal Delete --}}
     @if($deleteModalOpen)
     <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" wire:click="$set('deleteModalOpen', false)"></div>

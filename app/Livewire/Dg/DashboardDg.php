@@ -5,17 +5,13 @@ namespace App\Livewire\Dg;
 use App\Models\Notification;
 use App\Models\Project;
 use App\Models\School;
-use App\Models\User;
 use App\Services\NotificationService;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
-use Livewire\WithPagination;
 
 #[Layout('layouts.app')]
 class DashboardDg extends Component
 {
-    use WithPagination;
-
     public ?int $ficheProjectId = null;
 
     protected NotificationService $notificationService;
@@ -35,21 +31,30 @@ class DashboardDg extends Component
         $this->ficheProjectId = null;
     }
 
-    /**
-     * Quand le DG lit une notification liée à un projet, on enregistre
-     * dg_viewed_at et on transmet au Directeur d'École. Le statut reste 'Nouveau'.
-     */
+    // Mark project as consulted by DG → unlocks it for the school director.
+    public function consultProject(int $id): void
+    {
+        $project = Project::findOrFail($id);
+        if ($project->status === 'Nouveau' && is_null($project->consulted_by)) {
+            $project->update([
+                'consulted_by' => auth()->id(),
+            ]);
+            $this->notificationService->notifyProjectTransmittedToDirector($project);
+        }
+    }
+
     public function markNotificationRead(int $id): void
     {
-        $notification = Notification::where('id', $id)
+        $notification = Notification::where('id_notification', $id)
             ->where('user_id', auth()->id())
             ->firstOrFail();
 
         if (!$notification->is_read && $notification->project_id) {
             $project = $notification->project;
-
-            if ($project && $project->status === 'Nouveau' && is_null($project->dg_consulted_at)) {
-                $project->update(['dg_consulted_at' => now()]);
+            if ($project && $project->status === 'Nouveau' && is_null($project->consulted_by)) {
+                $project->update([
+                    'consulted_by' => auth()->id(),
+                ]);
                 $this->notificationService->notifyProjectTransmittedToDirector($project);
             }
         }
@@ -65,19 +70,15 @@ class DashboardDg extends Component
             'en_etude'       => Project::where('status', 'En Etude')->count(),
             'en_cours'       => Project::where('status', 'En Cours')->count(),
             'termine'        => Project::where('status', 'Termine')->count(),
-            'budget_total'   => Project::sum('budget'),
         ];
 
-        // Projets par école avec SplitCircle — tout chargé en une seule passe
         $allProjects = Project::whereNotIn('status', ['Termine'])
             ->with('school', 'nature', 'legalSteps', 'expenses')
             ->get()
             ->map(function ($p) {
                 $legalPct   = (float) $p->legalSteps->where('is_completed', true)->sum('percentage');
                 $totalSpent = (float) $p->expenses->sum('amount');
-                $budgetPct  = $p->budget > 0
-                    ? min(($totalSpent / $p->budget) * 100, 100)
-                    : 0;
+                $budgetPct  = $p->budget > 0 ? min(($totalSpent / $p->budget) * 100, 100) : 0;
 
                 return array_merge($p->toArray(), [
                     'legal_progress'     => $legalPct,
@@ -89,7 +90,7 @@ class DashboardDg extends Component
 
         $schools = School::all()->map(fn ($school) => [
             'school'   => $school,
-            'projects' => $allProjects->get($school->id, collect()),
+            'projects' => $allProjects->get($school->id_school, collect()),
         ]);
 
         $ficheProject = $this->ficheProjectId

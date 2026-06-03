@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Task;
+use App\Models\TodoTask;
 use App\Models\Project;
 use App\Models\Notification;
 use Illuminate\Http\Request;
@@ -21,7 +21,7 @@ class TaskController extends Controller
             abort(403, 'Accès refusé');
         }
 
-        $tasks = Task::where('project_id', $project->id)
+        $tasks = TodoTask::where('project_id', $project->id)
             ->orderBy('sort_order')
             ->get();
 
@@ -49,22 +49,21 @@ class TaskController extends Controller
         ]);
 
         // Vérifier que le total ne dépasse pas 100%
-        $currentTotal = Task::where('project_id', $project->id)
+        $currentTotal = TodoTask::where('project_id', $project->id)
             ->sum('percentage');
 
         if ($currentTotal + $request->percentage > 100) {
             return back()->with('error', 'La somme des pourcentages ne peut pas dépasser 100%');
         }
 
-        $maxOrder = Task::where('project_id', $project->id)->max('sort_order') ?? 0;
+        $maxOrder = TodoTask::where('project_id', $project->id)->max('sort_order') ?? 0;
 
-        Task::create([
-            'project_id' => $project->id,
-            'created_by' => $user->id,
-            'title' => $request->title,
-            'percentage' => $request->percentage,
-            'sort_order' => $maxOrder + 1,
-            'is_completed' => false,
+        TodoTask::create([
+            'project_id'  => $project->id,
+            'title_phase' => $request->title,
+            'percentage'  => $request->percentage,
+            'sort_order'  => $maxOrder + 1,
+            'is_completed'=> false,
         ]);
 
         return redirect()->back()->with('success', 'Tâche ajoutée');
@@ -73,7 +72,7 @@ class TaskController extends Controller
     /**
      * Basculer l'état d'une tâche
      */
-    public function toggle(Task $task)
+    public function toggle(TodoTask $task)
     {
         $user = auth()->user();
         $project = $task->project;
@@ -94,7 +93,7 @@ class TaskController extends Controller
     /**
      * Supprimer une tâche
      */
-    public function destroy(Task $task)
+    public function destroy(TodoTask $task)
     {
         $user = auth()->user();
         $project = $task->project;
@@ -121,7 +120,7 @@ class TaskController extends Controller
         }
 
         // Vérifier que la somme = 100%
-        $totalPercentage = Task::where('project_id', $project->id)
+        $totalPercentage = TodoTask::where('project_id', $project->id)
             ->sum('percentage');
 
         if ($totalPercentage !== 100) {
@@ -129,11 +128,11 @@ class TaskController extends Controller
         }
 
         // Vérifier que toutes les tâches sont complétées
-        $completedCount = Task::where('project_id', $project->id)
+        $completedCount = TodoTask::where('project_id', $project->id)
             ->where('is_completed', true)
             ->count();
 
-        $totalCount = Task::where('project_id', $project->id)->count();
+        $totalCount = TodoTask::where('project_id', $project->id)->count();
 
         if ($completedCount !== $totalCount) {
             return back()->with('error', 'Toutes les tâches doivent être complétées pour émettre l\'ODS');
@@ -148,11 +147,11 @@ class TaskController extends Controller
         // Notifier le Chef de Projet
         if ($project->chef_projet_id) {
             Notification::create([
-                'user_id' => $project->chef_projet_id,
-                'project_id' => $project->id,
-                'type' => 'ods_received',
-                'message' => "ODS réceptionnée pour le projet: {$project->title}. Vous pouvez maintenant saisir les dépenses.",
-                'priority' => 'high',
+                'user_id'           => $project->chef_projet_id,
+                'project_id'        => $project->id,
+                'type_notification' => 'ods_emise',
+                'message'           => "ODS réceptionnée pour le projet: {$project->title_project}. Vous pouvez maintenant saisir les dépenses.",
+                'priority'          => 'urgent',
             ]);
         }
 

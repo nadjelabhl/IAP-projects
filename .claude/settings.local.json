@@ -1,24 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(php artisan migrate:fresh --seed)",
-      "Bash(npm run build)",
+      "Bash(dir d:\\\\myapp\\\\Modele_Relationnel_IAP.docx)",
       "Bash(php artisan *)",
-      "Bash(php -l app/Livewire/Jurist/ReferentielJuridique.php)",
-      "Bash(php -l app/Livewire/Admin/ManageDefaults.php)",
-      "Bash(php -l app/Livewire/Director/DashboardDirector.php)",
-      "Bash(php -l app/Livewire/Chef/DashboardChef.php)",
-      "Bash(php -l app/Services/OdsService.php)",
-      "Bash(php -l app/Livewire/Dg/DashboardDg.php)",
-      "Bash(php -l app/Livewire/AssistantDg/Dashboard.php)",
-      "Bash(php -l app/Models/Project.php)",
-      "PowerShell(New-Item -ItemType Directory -Force \"D:\\\\myapp\\\\resources\\\\views\\\\livewire\\\\admin\\\\partials\")",
-      "PowerShell(ls \"C:\\\\wamp64\\\\bin\\\\mysql\" -ErrorAction SilentlyContinue | Select-Object Name; $mysqlPath = \\(ls \"C:\\\\wamp64\\\\bin\\\\mysql\" | Select-Object -First 1\\).FullName; ls \"$mysqlPath\\\\bin\" | Select-Object Name -First 5)",
-      "PowerShell(cmd /c \"dir C:\\\\wamp64\\\\bin /b\" 2>&1)",
-      "PowerShell(cmd /c \"dir C:\\\\wamp64\\\\bin\\\\mysql /b\" 2>&1)",
-      "PowerShell($session = New-Object Microsoft.PowerShell.Commands.WebRequestSession; $login = Invoke-WebRequest -Uri \"http://localhost:8000/login\" -SessionVariable sv -UseBasicParsing; $csrf = \\($login.Content | Select-String -Pattern 'name=\"_token\" value=\"\\([^\"]+\\)\"'\\).Matches[0].Groups[1].Value; $post = Invoke-WebRequest -Uri \"http://localhost:8000/login\" -Method POST -Body @{email=\"KarimHadj@sonatrach.dz\"; password=\"password2026\"; _token=$csrf} -WebSession $sv -UseBasicParsing -MaximumRedirection 5; $post.StatusCode)",
-      "PowerShell($resp = Invoke-WebRequest -Uri \"http://localhost:8000/login\" -SessionVariable sv -UseBasicParsing; $resp.StatusCode; \\($resp.Content | Select-String \"name=\"\\).Matches | Select-Object -First 3 Value)",
-      "Bash(php -r \"require 'vendor/autoload.php'; echo \\\\Composer\\\\InstalledVersions::getVersion\\('livewire/livewire'\\);\")"
+      "Bash(C:\\\\wamp64\\\\bin\\\\mysql\\\\mysql8.4.7\\\\bin\\\\mysql.exe *)"
     ]
   }
 }

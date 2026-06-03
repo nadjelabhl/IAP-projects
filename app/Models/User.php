@@ -52,22 +52,6 @@ class User extends Authenticatable
     }
 
     /**
-     * Relation avec les dépenses saisies
-     */
-    public function expenses(): HasMany
-    {
-        return $this->hasMany(Expense::class, 'entered_by');
-    }
-
-    /**
-     * Relation avec les tâches créées
-     */
-    public function tasks(): HasMany
-    {
-        return $this->hasMany(Task::class, 'created_by');
-    }
-
-    /**
      * Relation avec les notifications
      */
     public function notifications(): HasMany

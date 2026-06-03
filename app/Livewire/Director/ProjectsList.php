@@ -34,7 +34,7 @@ class ProjectsList extends Component
             ->latest();
 
         if ($this->search) {
-            $query->where('title', 'like', '%' . $this->search . '%');
+            $query->where('title_project', 'like', '%' . $this->search . '%');
         }
         if ($this->statusFilter) {
             $query->where('status', $this->statusFilter);

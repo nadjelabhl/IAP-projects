@@ -8,12 +8,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Notification extends Model
 {
-    protected $table = 'notifications';
+    protected $table      = 'notifications';
+    protected $primaryKey = 'id_notification';
+
+    public function getIdAttribute(): int { return $this->id_notification; }
 
     protected $fillable = [
         'user_id',
         'project_id',
-        'type',
+        'type_notification',
         'message',
         'priority',
         'is_read',
@@ -25,12 +28,6 @@ class Notification extends Model
         'read_at' => 'datetime',
     ];
 
-    /*
-    |--------------------------------------------------------------------------
-    | RELATIONS
-    |--------------------------------------------------------------------------
-    */
-
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
@@ -41,121 +38,63 @@ class Notification extends Model
         return $this->belongsTo(Project::class);
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | SCOPES - Filtrage par utilisateur, statut, type
-    |--------------------------------------------------------------------------
-    */
-
-    /**
-     * Scope : Notifications d'un utilisateur spécifique
-     */
     public function scopeForUser(Builder $query, int $userId): Builder
     {
         return $query->where('user_id', $userId);
     }
 
-    /**
-     * Scope : Notifications non lues
-     */
-    public function scopeUnread(Builder $query): Builder
-    {
-        return $query->where('is_read', false);
-    }
+    public function scopeUnread(Builder $query): Builder  { return $query->where('is_read', false); }
+    public function scopeRead(Builder $query): Builder    { return $query->where('is_read', true); }
 
-    /**
-     * Scope : Notifications lues
-     */
-    public function scopeRead(Builder $query): Builder
-    {
-        return $query->where('is_read', true);
-    }
-
-    /**
-     * Scope : Notifications d'un type spécifique
-     */
     public function scopeOfType(Builder $query, string $type): Builder
     {
-        return $query->where('type', $type);
+        return $query->where('type_notification', $type);
     }
 
-    /**
-     * Scope : Notifications urgentes
-     */
     public function scopeUrgent(Builder $query): Builder
     {
         return $query->where('priority', 'urgent');
     }
 
-    /**
-     * Scope : Notifications triées par date décroissante (les plus récentes d'abord)
-     */
     public function scopeLatest(Builder $query): Builder
     {
         return $query->orderBy('created_at', 'desc');
     }
 
-    /**
-     * Scope : Notifications d'un projet spécifique
-     */
     public function scopeForProject(Builder $query, int $projectId): Builder
     {
         return $query->where('project_id', $projectId);
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | LOGIQUE MÉTIER
-    |--------------------------------------------------------------------------
-    */
-
-    /**
-     * Marquer comme lu
-     */
     public function markAsRead(): void
     {
-        $this->update([
-            'is_read' => true,
-            'read_at' => now(),
-        ]);
+        $this->update(['is_read' => true, 'read_at' => now()]);
     }
 
-    /**
-     * Marquer comme non lu
-     */
     public function markAsUnread(): void
     {
-        $this->update([
-            'is_read' => false,
-            'read_at' => null,
-        ]);
+        $this->update(['is_read' => false, 'read_at' => null]);
     }
 
-    /**
-     * Obtenir le label du type de notification
-     */
     public function getTypeLabelAttribute(): string
     {
-        return match($this->type) {
-            'nouveau_projet' => 'Nouveau Projet',
+        return match($this->type_notification) {
+            'nouveau_projet'  => 'Nouveau Projet',
             'projet_transmis' => 'Projet Transmis',
-            'affectation' => 'Affectation',
-            'alerte_budget' => 'Alerte Budget',
-            'ods_emise' => 'ODS Émise',
-            'archivage' => 'Archivage',
-            default => $this->type,
+            'affectation'     => 'Affectation',
+            'alerte_budget'   => 'Alerte Budget',
+            'ods_emise'       => 'ODS Émise',
+            'archivage'       => 'Archivage',
+            default           => $this->type_notification,
         };
     }
 
-    /**
-     * Obtenir le label de priorité
-     */
     public function getPriorityLabelAttribute(): string
     {
         return match($this->priority) {
             'normal' => 'Normal',
             'urgent' => 'Urgent',
-            default => $this->priority,
+            default  => $this->priority,
         };
     }
 }

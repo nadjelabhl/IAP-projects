@@ -6,7 +6,6 @@ use Livewire\Component;
 use App\Models\Project;
 use App\Models\Expense;
 use App\Services\BudgetService;
-use App\Services\ArchiveService;
 use App\Services\NotificationService;
 use App\Services\OdsService;
 
@@ -18,14 +17,12 @@ class ExpenseManager extends Component
     public $expense_date;
 
     protected BudgetService $budgetService;
-    protected ArchiveService $archiveService;
     protected NotificationService $notificationService;
     protected OdsService $odsService;
 
-    public function boot(BudgetService $budgetService, ArchiveService $archiveService, NotificationService $notificationService, OdsService $odsService)
+    public function boot(BudgetService $budgetService, NotificationService $notificationService, OdsService $odsService)
     {
         $this->budgetService = $budgetService;
-        $this->archiveService = $archiveService;
         $this->notificationService = $notificationService;
         $this->odsService = $odsService;
     }
@@ -54,10 +51,9 @@ class ExpenseManager extends Component
 
         // Enregistrer la dépense avec BudgetService
         $expense = $this->budgetService->addExpense($this->project, [
-            'entered_by' => auth()->id(),
-            'description' => $this->description,
-            'amount' => $this->amount,
-            'expense_date' => $this->expense_date,
+            'description'      => $this->description,
+            'amount'           => $this->amount,
+            'attachement_date' => $this->expense_date,
         ]);
 
         if (!$expense) {
@@ -74,14 +70,16 @@ class ExpenseManager extends Component
 
     public function terminateProject()
     {
-        // Archiver le projet avec ArchiveService
-        $archive = $this->archiveService->archiveProject($this->project, 'Projet terminé par Chef de Projet', auth()->id());
-
-        if ($archive) {
-            session()->flash('message', 'Projet archivé avec succès.');
-        } else {
-            session()->flash('error', 'Erreur lors de l\'archivage du projet. Seuls les projets terminés peuvent être archivés.');
+        if ($this->project->status !== 'Termine') {
+            session()->flash('error', 'Seuls les projets au statut Terminé peuvent être clôturés.');
+            return;
         }
+
+        if (!$this->project->closed_at) {
+            $this->project->update(['closed_at' => now()]);
+        }
+
+        session()->flash('message', 'Projet clôturé avec succès.');
     }
 
     public function render()
@@ -89,7 +87,7 @@ class ExpenseManager extends Component
         $budgetSummary = $this->budgetService->getBudgetSummary($this->project);
 
         return view('livewire.expense-manager', [
-            'expenses' => $this->project->expenses()->orderBy('expense_date', 'desc')->get(),
+            'expenses' => $this->project->expenses()->orderBy('attachement_date', 'desc')->get(),
             'budgetSummary' => $budgetSummary,
         ]);
     }
